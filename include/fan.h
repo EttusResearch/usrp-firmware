@@ -30,7 +30,7 @@ struct fan_t {
 #define FAN_USE_FAST_START (1 << 1)
 
 /* The list of fans is instantiated in board.c. */
-extern const struct fan_t fans[];
+extern struct fan_t fans[];
 
 
 /**
