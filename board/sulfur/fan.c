@@ -29,6 +29,21 @@ struct fan_speed_t {
 
 static struct fan_speed_t fan_speed_state[2];
 
+int fan_percent_to_rpm(int fan, int pct)
+{
+	int rpm, max, min;
+
+	if (!pct) {
+		rpm = 0;
+	} else {
+		min = fans[fan].rpm_min;
+		max = fans[fan].rpm_max;
+		rpm = ((pct - 1) * max + (100 - pct) * min) / 99;
+	}
+
+	return rpm;
+}
+
 void fan_set_enabled(int ch, int enabled)
 {
 	const struct fan_t *fan = fans + ch;
