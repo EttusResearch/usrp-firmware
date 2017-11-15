@@ -28,6 +28,8 @@ int eeprom_get_mcu_flags(uint32_t **mcu_flags);
 
 int eeprom_get_autoboot(void);
 
+int eeprom_get_board_rev(void);
+
 int eeprom_get_fan_min(int fan);
 
 int eeprom_get_fan_max(int fan);

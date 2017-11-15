@@ -96,7 +96,8 @@ void board_config_pre_init(void)
 
 int board_get_version(void)
 {
-	return 0;
+	/* counting starts at 0 ... */
+	return eeprom_get_board_rev() + 1;
 }
 
 /* I2C ports */
