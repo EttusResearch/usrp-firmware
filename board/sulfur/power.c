@@ -49,6 +49,7 @@
 #define PGOOD_AP_DEBOUNCE_TIMEOUT (1000 * MSEC)
 
 static int forcing_shutdown;
+static int wdt_reset;
 
 static void power_dump_signals(void)
 {
@@ -122,6 +123,15 @@ enum power_state power_chipset_init(void)
 		/* Auto-power on ? */
 		if (eeprom_get_autoboot())
 			chipset_exit_hard_off();
+
+		/* make sure we come up if EC crashes */
+		if (system_get_reset_flags() & RESET_FLAG_SOFT)
+			chipset_exit_hard_off();
+
+		/* make sure we come up if EC crashes */
+		if (system_get_reset_flags() & RESET_FLAG_WATCHDOG)
+			chipset_exit_hard_off();
+
 	}
 
 	return POWER_G3;
@@ -312,7 +322,10 @@ DECLARE_HOOK(HOOK_POWER_BUTTON_CHANGE, powerbtn_sulfur_changed,
 static void force_reset(void)
 {
 	chipset_reset(1);
-	chipset_exit_hard_off();
+	if (wdt_reset) {
+		wdt_reset = 0;
+		chipset_exit_hard_off();
+	}
 }
 DECLARE_DEFERRED(force_reset);
 
@@ -324,7 +337,7 @@ static int reset_button_is_pressed(void)
 static void reset_button_poll(void)
 {
 	if (reset_button_is_pressed())
-		hook_call_deferred(&force_reset_data, 10 * MSEC);
+		hook_call_deferred(&force_reset_data, 50 * MSEC);
 	else
 		hook_call_deferred(&force_reset_data, -1);
 }
@@ -333,6 +346,7 @@ DECLARE_HOOK(HOOK_TICK, reset_button_poll, HOOK_PRIO_DEFAULT);
 void wdt_reset_event(enum gpio_signal signal)
 {
 	CPRINTS("Watchdog timeout, warm reset the AP\n");
+	wdt_reset = 1;
 	host_set_single_event(EC_HOST_EVENT_HANG_REBOOT);
 	hook_call_deferred(&force_reset_data, 10 * MSEC);
 }
