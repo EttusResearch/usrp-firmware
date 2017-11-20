@@ -62,7 +62,7 @@ static void power_dump_signals(void)
 	CPRINTS("power in:   0x%04x\n", signals);
 
 	/* Print the decode */
-	CPRINTS("bit meanings:\n");
+	CPRINTS("bit meanings:");
 	for (i = 0; i < POWER_SIGNAL_COUNT; i++, s++) {
 		int mask = 1 << i;
 		ccprintf("  0x%04x %d %s\n",
@@ -140,7 +140,7 @@ enum power_state power_chipset_init(void)
 static void force_shutdown(void)
 {
 	forcing_shutdown = 1;
-	CPRINTS("Forcing shutdown ...\n");
+	CPRINTS("Forcing shutdown ...");
 	task_wake(TASK_ID_CHIPSET);
 }
 DECLARE_DEFERRED(force_shutdown);
@@ -345,7 +345,7 @@ DECLARE_HOOK(HOOK_TICK, reset_button_poll, HOOK_PRIO_DEFAULT);
 
 void wdt_reset_event(enum gpio_signal signal)
 {
-	CPRINTS("Watchdog timeout, warm reset the AP\n");
+	CPRINTS("Watchdog timeout, warm reset the AP");
 	wdt_reset = 1;
 	host_set_single_event(EC_HOST_EVENT_HANG_REBOOT);
 	hook_call_deferred(&force_reset_data, 10 * MSEC);
