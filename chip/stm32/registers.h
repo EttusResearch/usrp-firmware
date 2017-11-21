@@ -376,6 +376,31 @@ struct timer_ctlr {
 /* Must be volatile, or compiler optimizes out repeated accesses */
 typedef volatile struct timer_ctlr timer_ctlr_t;
 
+#define STM32_TIM_CCER_CC2P		(1 << 5)
+#define STM32_TIM_CCER_CC2E		(1 << 4)
+#define STM32_TIM_CCER_CC1NP		(1 << 3)
+#define STM32_TIM_CCER_CC1NE		(1 << 2)
+#define STM32_TIM_CCER_CC1P		(1 << 1)
+#define STM32_TIM_CCER_CC1E		(1 << 0)
+
+#define STM32_TIM_SR_CC1IF		(1 << 0)
+#define STM32_TIM_SR_CC1OF		(1 << 9)
+
+#define STM32_TIM_CCMR_ICF1F_3		(1 << 7)
+#define STM32_TIM_CCMR_ICF1F_2		(1 << 6)
+#define STM32_TIM_CCMR_ICF1F_1		(1 << 5)
+#define STM32_TIM_CCMR_ICF1F_0		(1 << 4)
+#define STM32_TIM_CCMR_IC1_PSC_1	(1 << 3)
+#define STM32_TIM_CCMR_IC1_PSC_0	(1 << 2)
+#define STM32_TIM_CCMR_CC1S_1		(1 << 1)
+#define STM32_TIM_CCMR_CC1S_0		(1 << 0)
+
+#define STM32_TIM_DIER_CC1IE		(1 << 1)
+#define STM32_TIM_DIER_CC1OF		(1 << 9)
+
+#define STM32_TIM_CR1_CEN		(1 << 0)
+
+
 /* --- GPIO --- */
 
 #define GPIO_A                       STM32_GPIOA_BASE

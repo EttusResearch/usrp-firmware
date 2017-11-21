@@ -11,23 +11,84 @@
 #include "timer.h"
 #include "console.h"
 #include "eeprom.h"
+#include "clock.h"
+
+#include "console.h"
+#include "hwtimer.h"
+#include "task.h"
+#include "registers.h"
+#include "system.h"
+#include "util.h"
+
+
+#define IRQ_TIM(n) CONCAT2(STM32_IRQ_TIM, n)
 
 struct fan_speed_t {
-	unsigned int flags;
-
-	uint64_t last_irq;
 	int fan_mode;
 
-	int rpm_actual;
 	int rpm_target;
 
 	enum fan_status sts;
 	int enabled;
 
 	int last_diff;
+
+	uint32_t ccr_irq;
 };
 
-static struct fan_speed_t fan_speed_state[2];
+/* The prescaler is calculated as follows:
+ * F_CNT = F_CLK / PSC is the counter freq
+ *
+ * We got a 16 bit counter so 0x10000 is max + 1,
+ * therefore we need a prescaler of:
+ *
+ * PSC = F_CLK / F_MIN / 0x10000 where F_MIN is ~50Hz
+ * Additionally we only trigger TI1 every 8th pulse
+ * So we need to decimate by another 8
+ *
+ * In theory since the TACH signal gives us two pulses
+ * per rotation a 4 would be sufficient here.
+ */
+#define F_CNT_PSC (15 * 8)
+
+void fans_configure(void)
+{
+	gpio_config_module(MODULE_FAN, 1);
+
+#if defined (TIM_CAPTURE_FAN0)
+	/* Start with Fan0 */
+	__hw_timer_enable_clock(TIM_CAPTURE_FAN0, 1);
+
+	STM32_TIM_PSC(TIM_CAPTURE_FAN0) = F_CNT_PSC;
+
+	STM32_TIM_CCMR1(TIM_CAPTURE_FAN0) = STM32_TIM_CCMR_CC1S_0
+		|  STM32_TIM_CCMR_ICF1F_1 | STM32_TIM_CCMR_ICF1F_0
+		| STM32_TIM_CCMR_IC1_PSC_0 | STM32_TIM_CCMR_IC1_PSC_1;
+	STM32_TIM_CCER(TIM_CAPTURE_FAN0) = STM32_TIM_CCER_CC1E | STM32_TIM_CCER_CC1NP;
+	STM32_TIM_CR1(TIM_CAPTURE_FAN0) = STM32_TIM_CR1_CEN;
+	STM32_TIM_DIER(TIM_CAPTURE_FAN0) = STM32_TIM_DIER_CC1IE | STM32_TIM_DIER_CC1OF;
+
+	task_enable_irq(IRQ_TIM(TIM_CAPTURE_FAN0));
+#endif
+
+#if defined (TIM_CAPTURE_FAN1)
+	/* Then with Fan1 */
+	__hw_timer_enable_clock(TIM_CAPTURE_FAN1, 1);
+
+	STM32_TIM_PSC(TIM_CAPTURE_FAN1) = F_CNT_PSC;
+
+	STM32_TIM_CCMR1(TIM_CAPTURE_FAN1) = STM32_TIM_CCMR_CC1S_0
+		|  STM32_TIM_CCMR_ICF1F_1 | STM32_TIM_CCMR_ICF1F_0
+		| STM32_TIM_CCMR_IC1_PSC_0 | STM32_TIM_CCMR_IC1_PSC_1;
+	STM32_TIM_CCER(TIM_CAPTURE_FAN1) = STM32_TIM_CCER_CC1E | STM32_TIM_CCER_CC1NP;
+	STM32_TIM_CR1(TIM_CAPTURE_FAN1) = STM32_TIM_CR1_CEN;
+	STM32_TIM_DIER(TIM_CAPTURE_FAN1) = STM32_TIM_DIER_CC1IE | STM32_TIM_DIER_CC1OF;
+
+	task_enable_irq(IRQ_TIM(TIM_CAPTURE_FAN1));
+#endif
+}
+
+static struct fan_speed_t fan_speed_state[FAN_CH_COUNT];
 
 int fan_percent_to_rpm(int fan, int pct)
 {
@@ -70,6 +131,9 @@ void fan_set_duty(int ch, int percent)
 {
 	const struct fan_t *fan = fans + ch;
 
+	if (!percent)
+		percent = 1;
+
 	pwm_set_duty(fan->ch, percent);
 }
 
@@ -97,32 +161,28 @@ void fan_set_rpm_mode(int ch, int rpm_mode)
 
 int fan_get_rpm_actual(int ch)
 {
-	const struct fan_t *fan = fans + ch;
+	uint32_t freq, meas;
 
-	return fan_speed_state[fan->ch].rpm_actual;
+	freq = clock_get_freq();
+
+	meas = fan_speed_state[ch].ccr_irq;
+	if (!meas)
+		return 0;
+
+	/* The formula here would be:
+	 * RPM = F_CNT * 60 * 8 / meas / 2,
+	 * since we trigger only every 8th input and
+	 * the fan gives two pulses per revolution
+	 *
+	 * F_CNT is given by MCU_FREQ / (PSC + 1)
+	 */
+	return freq / (F_CNT_PSC + 1) / meas * 30 * 8;
 }
-
-void fan_check_stall(void)
-{
-	int i;
-	uint64_t time_now = get_time().val;
-	uint64_t diff;
-
-	for (i = 0; i < FAN_CH_COUNT; i++) {
-		diff = time_now - fan_speed_state[i].last_irq;
-
-		if (diff > 500 * MSEC)
-			fan_speed_state[i].rpm_actual = 0;
-	}
-}
-DECLARE_HOOK(HOOK_SECOND, fan_check_stall, HOOK_PRIO_DEFAULT);
 
 int fan_get_rpm_target(int ch)
 {
-	const struct fan_t *fan = fans + ch;
-
 	if (fan_get_enabled(ch))
-		return fan_speed_state[fan->ch].rpm_target;
+		return fan_speed_state[ch].rpm_target;
 
 	return 0;
 }
@@ -133,7 +193,7 @@ test_mockable void fan_set_rpm_target(int ch, int rpm)
 
 	if (rpm < fan->rpm_min)
 		rpm = fan->rpm_min;
-	fan_speed_state[fan->ch].rpm_target = rpm;
+	fan_speed_state[ch].rpm_target = rpm;
 }
 
 enum fan_status fan_get_status(int ch)
@@ -147,7 +207,7 @@ int fan_is_stalled(int ch)
 	    !fan_get_duty(ch))
 		return 0;
 
-	return fan_speed_state[ch].sts == FAN_STATUS_STOPPED;
+	return !fan_get_rpm_actual(ch);
 }
 
 void fan_channel_setup(int ch, unsigned int flags)
@@ -173,25 +233,24 @@ void fan_init(void)
 
 	msleep(50);
 
-	gpio_enable_interrupt(GPIO_SYS_FAN0_TACH);
-	gpio_enable_interrupt(GPIO_SYS_FAN1_TACH);
+	fans_configure();
 }
 /* need to initialize the PWM before turning on IRQs */
-DECLARE_HOOK(HOOK_INIT, fan_init, HOOK_PRIO_INIT_PWM+1);
+DECLARE_HOOK(HOOK_INIT, fan_init, HOOK_PRIO_INIT_FAN);
 
 #define FAN_READJUST 100
 
 void fan_ctrl(void)
 {
-	int ch, duty, diff, actual, target, last_diff;
+	int32_t ch, duty, diff, actual, target, last_diff;
 	for (ch = 0; ch < FAN_CH_COUNT; ch++)
 	{
-		if (!fan_get_enabled(ch))
+		if (!fan_get_enabled(ch) && !fan_get_duty(ch))
 			continue;
 
 		duty = fan_get_duty(ch);
-		target = fan_get_rpm_target(ch);
-		actual = fan_get_rpm_actual(ch);
+		target = (int32_t) fan_get_rpm_target(ch);
+		actual = (int32_t) fan_get_rpm_actual(ch);
 		diff = target - actual;
 
 		last_diff = fan_speed_state[ch].last_diff;
@@ -241,15 +300,80 @@ void fan_ctrl(void)
 }
 DECLARE_HOOK(HOOK_SECOND, fan_ctrl, HOOK_PRIO_DEFAULT);
 
-void fan_tach_interrupt(enum gpio_signal sig)
+#if defined(TIM_CAPTURE_FAN0)
+void __fan0_capture_irq(void)
 {
-	uint64_t diff;
-	uint64_t time_now = get_time().val;
-	int fan = sig - GPIO_SYS_FAN0_TACH;
+	static uint32_t counter0, counter1;
+	static int saw_first_edge;
 
-	diff = time_now - fan_speed_state[fan].last_irq;
-	fan_speed_state[fan].last_irq = time_now;
+	uint32_t sr = STM32_TIM_SR(TIM_CAPTURE_FAN0);
 
-	/* be careful here, to make sure diff is legit */
-	fan_speed_state[fan].rpm_actual = diff ? (300000 / (diff / 100)) : 0;
+	/* if no capture event, this was unexpected,
+	 * return early
+	 */
+	if (!(sr & STM32_TIM_SR_CC1IF))
+		return;
+
+	/* got an overflow, clear flag, say we didn't see no edge */
+	if (sr & STM32_TIM_SR_CC1OF) {
+		saw_first_edge = 0;
+		STM32_TIM_SR(TIM_CAPTURE_FAN0) &= ~(STM32_TIM_SR_CC1OF);
+		return;
+	}
+
+	/* this is the first edge */
+	if (!saw_first_edge) {
+		counter0 = (uint32_t) STM32_TIM_CCR1(TIM_CAPTURE_FAN0);
+		saw_first_edge = 1;
+		return;
+	}
+
+	counter1 = (uint32_t) STM32_TIM_CCR1(TIM_CAPTURE_FAN0);
+	if (counter1 > counter0)
+		fan_speed_state[0].ccr_irq = counter1 - counter0;
+	else
+		fan_speed_state[0].ccr_irq = counter1 + 0xffff - counter0 + 1;
+
+	counter0 = counter1;
 }
+DECLARE_IRQ(IRQ_TIM(TIM_CAPTURE_FAN0), __fan0_capture_irq, 2);
+#endif /* TIM_CAPTURE_FAN0 */
+
+#if defined(TIM_CAPTURE_FAN1)
+void __fan1_capture_irq(void)
+{
+	static uint32_t counter0, counter1;
+	static int saw_first_edge;
+
+	uint32_t sr = STM32_TIM_SR(TIM_CAPTURE_FAN1);
+
+	/* if no capture event, this was unexpected,
+	 * return early
+	 */
+	if (!(sr & STM32_TIM_SR_CC1IF))
+		return;
+
+	/* got an overflow, clear flag, say we didn't see no edge */
+	if (sr & STM32_TIM_SR_CC1OF) {
+		saw_first_edge = 0;
+		STM32_TIM_SR(TIM_CAPTURE_FAN1) &= ~(STM32_TIM_SR_CC1OF);
+		return;
+	}
+
+	/* this is the first edge */
+	if (!saw_first_edge) {
+		counter0 = (uint32_t) STM32_TIM_CCR1(TIM_CAPTURE_FAN1);
+		saw_first_edge = 1;
+		return;
+	}
+
+	counter1 = (uint32_t) STM32_TIM_CCR1(TIM_CAPTURE_FAN1);
+	if (counter1 > counter0)
+		fan_speed_state[1].ccr_irq = counter1 - counter0;
+	else
+		fan_speed_state[1].ccr_irq = counter1 + 0xffff - counter0 + 1;
+
+	counter0 = counter1;
+}
+DECLARE_IRQ(IRQ_TIM(TIM_CAPTURE_FAN1), __fan1_capture_irq, 2);
+#endif /* TIM_CAPTURE_FAN1 */

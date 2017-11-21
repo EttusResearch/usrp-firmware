@@ -81,6 +81,8 @@
 /* Timer selection */
 #define TIM_CLOCK32 2
 #define TIM_WATCHDOG 4
+#define TIM_CAPTURE_FAN0 16
+#define TIM_CAPTURE_FAN1 17
 
 #define CONFIG_FANS 2
 
@@ -123,7 +125,7 @@ enum temp_sensor_id {
 };
 
 enum fan_channel {
-	FAN_CH_0,
+	FAN_CH_0 = 0,
 	FAN_CH_1,
 
 	/* Number of FAN channels */
