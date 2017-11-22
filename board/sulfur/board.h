@@ -78,6 +78,9 @@
 #define I2C_PORT_THERMAL I2C_PORT_MASTER
 #define CONFIG_HOSTCMD_ALIGNED
 
+#define CONFIG_LOW_POWER_IDLE
+#define CONFIG_LOW_POWER_S0
+
 /* Timer selection */
 #define TIM_CLOCK32 2
 #define TIM_WATCHDOG 4
