@@ -46,10 +46,14 @@
 #define FORCED_SHUTDOWN_DELAY  (3 * SECOND)
 #define FORCED_RESET_DELAY  (50 * MSEC)
 
-#define PGOOD_AP_DEBOUNCE_TIMEOUT (1000 * MSEC)
+#define PGOOD_AP_DEBOUNCE_TIMEOUT (1 * SECOND)
+#define PGOOD_AP_DEBOUNCE_TIMEOUT_REV5 (6 * SECOND)
+#define PGOOD_AP_FIRST_TIMEOUT (1 * SECOND)
+#define PGOOD_AP_FIRST_TIMEOUT_REV5 (3 * SECOND)
 
 static int forcing_shutdown;
 static int wdt_reset;
+static int is_rev5;
 
 static void power_dump_signals(void)
 {
@@ -113,6 +117,15 @@ void chipset_reset(int cold_reset)
 
 enum power_state power_chipset_init(void)
 {
+	int rev;
+
+	/* if error, i.e. not initialized, or 5, behave like 5 */
+	rev = eeprom_get_board_rev();
+	if (rev < 0 || (rev + 1) == 5) {
+		CPRINTS("Enabling rev5 workaround");
+		is_rev5 = 1;
+	}
+
 	if (system_jumped_to_this_image()) {
 		if ((power_get_signals() & IN_PGOOD_S0) == IN_PGOOD_S0) {
 			disable_sleep(SLEEP_MASK_AP_RUN);
@@ -202,7 +215,8 @@ enum power_state power_handle_state(enum power_state state)
 		 * it here as well.
 		 */
 		if (power_wait_signals_timeout(IN_PGOOD_AP,
-					       PGOOD_AP_DEBOUNCE_TIMEOUT)
+					       is_rev5 ? PGOOD_AP_DEBOUNCE_TIMEOUT_REV5
+					       : PGOOD_AP_DEBOUNCE_TIMEOUT)
 					       == EC_ERROR_TIMEOUT) {
 			forcing_shutdown = 1;
 			return POWER_S0S3;
@@ -280,7 +294,10 @@ enum power_state power_handle_state(enum power_state state)
 		return POWER_S3;
 
 	case POWER_S3S0:
-		if (power_wait_signals(IN_PGOOD_S0)) {
+		if (power_wait_signals_timeout(IN_PGOOD_S0,
+					       is_rev5 ? PGOOD_AP_FIRST_TIMEOUT_REV5
+					       : PGOOD_AP_FIRST_TIMEOUT)
+		    == EC_ERROR_TIMEOUT) {
 			chipset_force_shutdown();
 			return POWER_S0S3;
 		}
