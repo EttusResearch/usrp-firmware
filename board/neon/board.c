@@ -76,6 +76,43 @@ static void heartbeat_led(void)
 }
 DECLARE_HOOK(HOOK_SECOND, heartbeat_led, HOOK_PRIO_DEFAULT);
 
+static int command_power_seq(int argc, char **argv)
+{
+	(void) argc;
+	(void) argv;
+
+	/* Keep AP in Reset */
+	gpio_set_level(GPIO_PS_POR_RESET_L, 0);
+
+	gpio_set_level(GPIO_PWR_1V0_EN_L, 0);
+	msleep(10);
+	gpio_set_level(GPIO_PWR_1V8_EN, 1);
+	msleep(5);
+	gpio_set_level(GPIO_PWR_1V3_EN, 1);
+	msleep(5);
+	gpio_set_level(GPIO_PWR_3V3_EN, 1);
+	msleep(5);
+	gpio_set_level(GPIO_PWR_MGTVTT_EN, 1);
+	gpio_set_level(GPIO_PWR_MGTVCC_EN, 1);
+	msleep(5);
+	gpio_set_level(GPIO_PWR_3V8_EN, 1);
+	msleep(5);
+	gpio_set_level(GPIO_PWR_CLK_EN, 1);
+	msleep(5);
+
+	/* Turn on (AP/FPGA) DDR */
+	gpio_set_level(GPIO_PWR_1V5_EN, 1);
+
+	/* Take AP out of reset */
+	gpio_set_level(GPIO_PS_POR_RESET_L, 1);
+	msleep(50);
+
+	return EC_SUCCESS;
+}
+DECLARE_CONSOLE_COMMAND(power_on, command_power_seq,
+			NULL, "Power on FPGA/ARM");
+
+
 int extpower_is_present(void)
 {
 	return 0;
