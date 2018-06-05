@@ -8,6 +8,7 @@
 #include "common.h"
 #include "config.h"
 #include "ec_commands.h"
+#include "fan.h"
 #include "board_config.h"
 
 uint32_t get_feature_flags0(void)
@@ -20,7 +21,7 @@ uint32_t get_feature_flags0(void)
 		| EC_FEATURE_MASK_0(EC_FEATURE_FLASH)
 #endif
 #ifdef CONFIG_FANS
-		| EC_FEATURE_MASK_0(EC_FEATURE_PWM_FAN)
+		| EC_FEATURE_MASK_0(((fan_get_enabled(FAN_CH_0)) ? EC_FEATURE_PWM_FAN : 0))
 #endif
 #ifdef CONFIG_PWM_KBLIGHT
 		| EC_FEATURE_MASK_0(EC_FEATURE_PWM_KEYB)

@@ -80,7 +80,7 @@ static void set_enabled(int fan, int enable)
 	fan_set_enabled(fans[fan].ch, enable);
 
 	if (fans[fan].enable_gpio >= 0)
-		gpio_set_level(fans[fan].enable_gpio, enable);
+		gpio_set_level(fans[fan].enable_gpio, fan_get_enabled(fan));
 }
 
 static void set_thermal_control_enabled(int fan, int enable)

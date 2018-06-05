@@ -113,7 +113,6 @@ const unsigned int i2c_ports_used = ARRAY_SIZE(i2c_ports);
 
 #ifdef CONFIG_PWM
 const struct pwm_t pwm_channels[] = {
-	{STM32_TIM(15), STM32_TIM_CH(1), 0, 25000},              // 15
 	{STM32_TIM(3),  STM32_TIM_CH(1), 0, 25000},              // 14
 };
 BUILD_ASSERT(ARRAY_SIZE(pwm_channels) == PWM_CH_COUNT);
@@ -152,6 +151,19 @@ const struct temp_sensor_t temp_sensors[] = {
 };
 BUILD_ASSERT(ARRAY_SIZE(temp_sensors) == TEMP_SENSOR_COUNT);
 #endif /* CONFIG_TEMP_SENSOR */
+
+struct fan_t fans[] = {
+	[FAN_CH_0] = {
+		.flags = FAN_USE_RPM_MODE,
+		.rpm_min = 3800, /* Fan speeds get overwritten with values from the EEPROM */
+		.rpm_start = 8000,
+		.rpm_max = 12400,
+		.ch = 0,
+		.pgood_gpio = -1,
+		.enable_gpio = GPIO_FAN_EN,
+	},
+};
+BUILD_ASSERT(ARRAY_SIZE(fans) == FAN_CH_COUNT);
 
 struct ec_thermal_config thermal_params[] = {
 	/* {Twarn, Thigh, Thalt}, fan_off, fan_max */

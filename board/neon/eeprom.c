@@ -19,6 +19,7 @@
 #define ntohl htonl
 
 #define EEPROM_AUTOBOOT_FLAG (1 << 0)
+#define EEPROM_FAN_PRESENT (1 << 1)
 
 #define DEFAULT_FAN_MIN 3800
 #define DEFAULT_FAN_MAX 13000

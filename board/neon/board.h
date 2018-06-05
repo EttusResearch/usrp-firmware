@@ -22,6 +22,8 @@
 #undef CONFIG_HOST_COMMAND_STATUS
 #define CONFIG_I2C
 
+#define CONFIG_FAN_RPM_CUSTOM
+
 #define CONFIG_POWER_BUTTON
 #define CONFIG_POWER_COMMON
 #define CONFIG_POWER_BUTTON_ACTIVE_STATE 0
@@ -76,6 +78,9 @@
 /* Timer selection */
 #define TIM_CLOCK32 2
 #define TIM_WATCHDOG 4
+#define TIM_CAPTURE_FAN0 15
+
+#define CONFIG_FANS 1
 
 #ifndef __ASSEMBLER__
 
@@ -86,7 +91,6 @@
 
 enum pwm_channel {
 	PWM_CH_FAN0 = 0,
-	PWM_CH_FAN1,
 
 	/* Number of PWM channels */
 	PWM_CH_COUNT
@@ -113,6 +117,12 @@ enum temp_sensor_id {
 	TEMP_SENSOR_REMOTE2,
 
 	TEMP_SENSOR_COUNT
+};
+
+enum fan_channel {
+	FAN_CH_0 = 0,
+	/* Number of FAN channels */
+	FAN_CH_COUNT
 };
 
 /* Board specific handlers */
