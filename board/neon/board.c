@@ -1,7 +1,7 @@
 /* Copyright (c) 2016,2017 The Chromium OS Authors. All rights reserved.
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.  */
-/* National Instruments Sulfur board configuration */
+/* National Instruments Neon board configuration */
 
 #include "common.h"
 #include "ec_version.h"
@@ -123,7 +123,7 @@ BUILD_ASSERT(ARRAY_SIZE(pwm_channels) == PWM_CH_COUNT);
 const void *const usb_strings[] = {
 	[USB_STR_DESC]         = usb_string_desc,
 	[USB_STR_VENDOR]       = USB_STRING_DESC("National Instruments Inc."),
-	[USB_STR_PRODUCT]      = USB_STRING_DESC("Project Sulfur"),
+	[USB_STR_PRODUCT]      = USB_STRING_DESC("Project Neon"),
 	[USB_STR_VERSION]      = USB_STRING_DESC(CROS_EC_VERSION32),
 	[USB_STR_CONSOLE_NAME] = USB_STRING_DESC("Shell"),
 };

@@ -28,7 +28,7 @@
 
 static const uint32_t USRP_EEPROM_MAGIC = 0xF008AD10;
 
-static struct usrp_sulfur_eeprom eeprom;
+static struct usrp_neon_eeprom eeprom;
 
 static int eeprom_check_initialized(void)
 {

@@ -3,7 +3,7 @@
  * found in the LICENSE file.
  */
 
-/* Sulfur board configuration */
+/* Neon board configuration */
 
 #ifndef __CROS_EC_BOARD_H
 #define __CROS_EC_BOARD_H
@@ -21,8 +21,6 @@
 #define CONFIG_FORCE_CONSOLE_RESUME
 #undef CONFIG_HOST_COMMAND_STATUS
 #define CONFIG_I2C
-
-#define CONFIG_SULFUR_5V_WORKAROUND
 
 #define CONFIG_POWER_BUTTON
 #define CONFIG_POWER_COMMON
