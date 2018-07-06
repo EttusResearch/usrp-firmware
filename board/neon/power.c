@@ -24,6 +24,8 @@
 #define PGOOD_AP_DEBOUNCE_TIMEOUT (1 * SECOND)
 #define AP_RST_HOLD_US (1 * MSEC)
 
+#define FORCED_SHUTDOWN_DELAY  (3 * SECOND)
+
 static void ap_set_reset(int asserted)
 {
 	gpio_set_level(GPIO_PS_POR_RESET_L, !asserted);
@@ -68,6 +70,13 @@ void chipset_reset(int cold_reset)
 
 	ap_set_reset(0);
 }
+
+static void force_shutdown(void)
+{
+	forcing_shutdown = 1;
+	task_wake(TASK_ID_CHIPSET);
+}
+DECLARE_DEFERRED(force_shutdown);
 
 enum power_state power_handle_state(enum power_state state)
 {
@@ -173,7 +182,10 @@ enum power_state power_handle_state(enum power_state state)
 		/* Enable idle task deep sleep. */
 		enable_sleep(SLEEP_MASK_AP_RUN);
 
-		/* FIXME: Handle power button presses */
+		if (power_button_is_pressed()) {
+			forcing_shutdown = 1;
+			hook_call_deferred(&force_shutdown_data, -1);
+		}
 
 		return POWER_S3;
 
@@ -199,6 +211,9 @@ static void powerbtn_neon_changed(void)
 		CPRINTS("power button is pressed");
 		if (chipset_in_state(CHIPSET_STATE_ANY_OFF))
 			chipset_exit_hard_off();
+		hook_call_deferred(&force_shutdown_data, FORCED_SHUTDOWN_DELAY);
+	} else {
+		hook_call_deferred(&force_shutdown_data, -1);
 	}
 }
 DECLARE_HOOK(HOOK_POWER_BUTTON_CHANGE, powerbtn_neon_changed, HOOK_PRIO_DEFAULT);
