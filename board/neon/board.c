@@ -144,10 +144,14 @@ int charge_get_percent(void) { return 100; }
 const struct temp_sensor_t temp_sensors[] = {
 	{"TMP464_Internal", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val,
 		TMP468_LOCAL},
-	{"TMP464_Remote_1", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val,
+	{"TMP464_Remote_1", TEMP_SENSOR_TYPE_CPU, tmp468_get_val,
 		TMP468_REMOTE1},
-	{"TMP464_Remote_2", TEMP_SENSOR_TYPE_CPU, tmp468_get_val,
+	{"TMP464_Remote_2", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val,
 		TMP468_REMOTE2},
+	{"TMP464_Remote_3", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val,
+		TMP468_REMOTE3},
+	{"TMP464_Remote_4", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val,
+		TMP468_REMOTE4},
 };
 BUILD_ASSERT(ARRAY_SIZE(temp_sensors) == TEMP_SENSOR_COUNT);
 #endif /* CONFIG_TEMP_SENSOR */
@@ -167,8 +171,10 @@ BUILD_ASSERT(ARRAY_SIZE(fans) == FAN_CH_COUNT);
 
 struct ec_thermal_config thermal_params[] = {
 	/* {Twarn, Thigh, Thalt}, fan_off, fan_max */
-	{{C_TO_K(50), C_TO_K(65), C_TO_K(75)}, {0,0,0}, C_TO_K(30), C_TO_K(60)},	/* Ambient */
+	{{C_TO_K(50), C_TO_K(65), C_TO_K(75)}, {0,0,0}, C_TO_K(30), C_TO_K(60)},	/* Internal TMP468 sensor */
 	{{C_TO_K(80), C_TO_K(85), C_TO_K(95)}, {0,0,0}, C_TO_K(50), C_TO_K(80)},	/* AP Diode */
-	{{C_TO_K(80), C_TO_K(85), C_TO_K(95)}, {0,0,0}, C_TO_K(50), C_TO_K(80)},	/* FIXME */
+	{{C_TO_K(80), C_TO_K(85), C_TO_K(95)}, {0,0,0}, C_TO_K(50), C_TO_K(80)},	/* Board sensor near RF FE Amps for channel A */
+	{{C_TO_K(80), C_TO_K(85), C_TO_K(95)}, {0,0,0}, C_TO_K(50), C_TO_K(80)},	/* Board sensor near RF FE Amps for channel B */
+	{{C_TO_K(80), C_TO_K(85), C_TO_K(95)}, {0,0,0}, C_TO_K(50), C_TO_K(80)},	/* Board sensor near main power supply section */
 };
 BUILD_ASSERT(ARRAY_SIZE(thermal_params) == TEMP_SENSOR_COUNT);
