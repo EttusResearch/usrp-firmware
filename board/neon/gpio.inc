@@ -21,6 +21,8 @@ GPIO_INT(PWR_MGTVTT_PG,		PIN(C, 10), GPIO_INT_BOTH, power_signal_interrupt)
 GPIO_INT(PWR_MGTVCC_PG,		PIN(C, 12), GPIO_INT_BOTH, power_signal_interrupt)
 GPIO_INT(SYS_PS_PWRON,		PIN(B, 0),  GPIO_INT_BOTH, power_signal_interrupt)
 
+GPIO_INT(SYS_RTC_RST_L,		PIN(B, 15), GPIO_INT_FALLING, wdt_reset_event)
+
 /* Outputs */
 GPIO(POWER_LED,			PIN(A, 8),  GPIO_OUT_HIGH)
 GPIO(SYS_LED,			PIN(B, 8),  GPIO_OUT_LOW)
