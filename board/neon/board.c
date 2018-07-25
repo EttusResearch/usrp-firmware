@@ -57,7 +57,7 @@ BUILD_ASSERT(ARRAY_SIZE(power_signal_list) == POWER_SIGNAL_COUNT);
 
 static void board_init(void)
 {
-	/*gpio_enable_interrupt(GPIO_SYS_RTC_INT);*/
+	gpio_enable_interrupt(GPIO_SYS_RTC_RST_L);
 }
 DECLARE_HOOK(HOOK_INIT, board_init, HOOK_PRIO_DEFAULT);
 

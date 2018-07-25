@@ -11,6 +11,7 @@
 #include "task.h"
 #include "util.h"
 #include "hooks.h"
+#include "host_command.h"
 #include "power_button.h"
 
 #define CPUTS(outstr) cputs(CC_CHIPSET, outstr)
@@ -277,8 +278,22 @@ static void powerbtn_neon_changed(void)
 }
 DECLARE_HOOK(HOOK_POWER_BUTTON_CHANGE, powerbtn_neon_changed, HOOK_PRIO_DEFAULT);
 
+static int wdt_reset;
+
+static void force_reset(void)
+{
+	chipset_reset(1);
+	if (wdt_reset) {
+		wdt_reset = 0;
+		chipset_exit_hard_off();
+	}
+}
+DECLARE_DEFERRED(force_reset);
+
 void wdt_reset_event(enum gpio_signal signal)
 {
-	CPRINTS("WDT reset happened");
-	chipset_reset(0);
+	CPRINTS("Watchdog timeout, warm reset the AP");
+	wdt_reset = 1;
+	host_set_single_event(EC_HOST_EVENT_HANG_REBOOT);
+	hook_call_deferred(&force_reset_data, 10 * MSEC);
 }
