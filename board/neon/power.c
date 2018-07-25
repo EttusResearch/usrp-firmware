@@ -27,13 +27,14 @@
 #define IN_PGOOD_MGTVTT POWER_SIGNAL_MASK(PWR_MGTVTT_PG)
 #define IN_PGOOD_MGTVCC POWER_SIGNAL_MASK(PWR_MGTVCC_PG)
 
-#define IN_PGOOD_AP POWER_SIGNAL_MASK(SYS_PS_PWRON)
-#define IN_PGOOD_S3 (0)
-#if 0
+#ifndef CONFIG_NEON_1V0_WORKAROUND
 #define IN_PGOOD_S5 (IN_PGOOD_1V0)
 #else
 #define IN_PGOOD_S5 (0)
-#endif
+#endif /* CONFIG_NEON_1V0_WORKAROUND */
+
+#define IN_PGOOD_S3 (IN_PGOOD_S5 | IN_PGOOD_1V3 | IN_PGOOD_1V5 | IN_PGOOD_1V8 | IN_PGOOD_3V3 | IN_PGOOD_3V8 | IN_PGOOD_MGTVCC | IN_PGOOD_MGTVTT)
+#define IN_PGOOD_AP POWER_SIGNAL_MASK(SYS_PS_PWRON)
 #define IN_PGOOD_S0 (IN_PGOOD_AP | IN_PGOOD_S3 | IN_PGOOD_S5)
 
 #define PGOOD_AP_FIRST_TIMEOUT (1 * SECOND)
@@ -63,13 +64,6 @@ enum power_state power_chipset_init(void)
 		if (system_get_reset_flags() & RESET_FLAG_WATCHDOG)
 			chipset_exit_hard_off();
 	}
-
-	power_signal_disable_interrupt(GPIO_PWR_1V8_PG);
-	power_signal_disable_interrupt(GPIO_PWR_1V3_PG);
-	power_signal_disable_interrupt(GPIO_PWR_MGTVTT_PG);
-	power_signal_disable_interrupt(GPIO_PWR_MGTVCC_PG);
-	power_signal_disable_interrupt(GPIO_PWR_3V8_PG);
-	power_signal_disable_interrupt(GPIO_PWR_1V5_PG);
 
 	return POWER_G3;
 }
@@ -105,40 +99,32 @@ enum power_state power_handle_state(enum power_state state)
 {
 	switch (state) {
 	case POWER_G3:
-		CPRINTS("in G3");
 		break;
 
 	case POWER_G3S5:
-		CPRINTS("in G3G5");
 		forcing_shutdown = 0;
 		return POWER_S5;
 
 	case POWER_S5G3:
-		CPRINTS("in S5G3");
 		return POWER_G3;
 
 	case POWER_S5:
-		CPRINTS("in S5");
 		if (forcing_shutdown)
 			return POWER_S5G3;
 		else
 			return POWER_S5S3;
 	
 	case POWER_S5S3:
-		CPRINTS("in S5G3");
 		ap_set_reset(1);
 		gpio_set_level(GPIO_PWR_1V0_EN_L, 0);
-		power_signal_enable_interrupt(GPIO_PWR_1V0_PG);
 		msleep(10);
 		hook_notify(HOOK_CHIPSET_PRE_INIT);
 		return POWER_S3;
 
 	case POWER_S3S5:
-		CPRINTS("in S3S5");
 		hook_notify(HOOK_CHIPSET_SHUTDOWN);
 
 		gpio_set_level(GPIO_PWR_1V0_EN_L, 1);
-		power_signal_disable_interrupt(GPIO_PWR_1V0_PG);
 
 		/* Change EC_INT_L pin to high-Z to reduce power draw. */
 		gpio_set_flags(GPIO_EC_INT_L, GPIO_INPUT);
@@ -149,39 +135,31 @@ enum power_state power_handle_state(enum power_state state)
 		return POWER_S5;
 
 	case POWER_S3:
-		CPRINTS("in S3, shutting down: %u", forcing_shutdown);
 		if (!power_has_signals(IN_PGOOD_S5) || forcing_shutdown)
 			return POWER_S3S5;
 
 		gpio_set_level(GPIO_PWR_1V8_EN, 1);
-		power_signal_enable_interrupt(GPIO_PWR_1V8_PG);
 
 		gpio_set_level(GPIO_PWR_1V3_EN, 1);
-		power_signal_enable_interrupt(GPIO_PWR_1V3_PG);
 		usleep(5);
 
 		/* Apparently this one is special */
-		power_signal_enable_interrupt(GPIO_PWR_3V3_PG);
 		gpio_set_level(GPIO_PWR_3V3_EN, 1);
 		usleep(5);
 
 		gpio_set_level(GPIO_PWR_MGTVTT_EN, 1);
-		power_signal_enable_interrupt(GPIO_PWR_MGTVTT_PG);
 
 		gpio_set_level(GPIO_PWR_MGTVCC_EN, 1);
-		power_signal_enable_interrupt(GPIO_PWR_MGTVCC_PG);
 
 		usleep(5);
 
 		gpio_set_level(GPIO_PWR_3V8_EN, 1);
-		power_signal_enable_interrupt(GPIO_PWR_3V8_PG);
 		usleep(5);
 
 		gpio_set_level(GPIO_PWR_CLK_EN, 1);
 		msleep(5);
 
 		gpio_set_level(GPIO_PWR_1V5_EN, 1);
-		power_signal_enable_interrupt(GPIO_PWR_1V5_PG);
 
 
 		if (power_wait_signals_timeout(IN_PGOOD_S3, 100 * MSEC)
@@ -213,13 +191,11 @@ enum power_state power_handle_state(enum power_state state)
 	case POWER_S0S3:
 		hook_notify(HOOK_CHIPSET_SUSPEND);
 
-		power_signal_disable_interrupt(GPIO_PWR_1V5_PG);
 		gpio_set_level(GPIO_PWR_1V5_EN, 0);
 
 		gpio_set_level(GPIO_PWR_CLK_EN, 0);
 		msleep(5);
 
-		power_signal_disable_interrupt(GPIO_PWR_3V8_PG);
 		gpio_set_level(GPIO_PWR_3V8_EN, 0);
 		msleep(5);
 
@@ -227,15 +203,12 @@ enum power_state power_handle_state(enum power_state state)
 		gpio_set_level(GPIO_PWR_MGTVTT_EN, 0);
 		msleep(5);
 
-		power_signal_disable_interrupt(GPIO_PWR_3V3_PG);
 		gpio_set_level(GPIO_PWR_3V3_EN, 0);
 		msleep(5);
 
-		power_signal_disable_interrupt(GPIO_PWR_1V8_PG);
 		gpio_set_level(GPIO_PWR_1V8_EN, 0);
 		msleep(5);
 
-		power_signal_disable_interrupt(GPIO_PWR_1V3_PG);
 		gpio_set_level(GPIO_PWR_1V3_EN, 0);
 		msleep(5);
 
