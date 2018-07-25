@@ -94,13 +94,13 @@ void board_config_pre_init(void)
 	STM32_SYSCFG_CFGR1 |= (1 << 9) | (1 << 10);
 }
 
-#if 0
+#ifdef CONFIG_BOARD_SPECIFIC_VERSION
 int board_get_version(void)
 {
 	/* counting starts at 0 ... */
 	return eeprom_get_board_rev() + 1;
 }
-#endif
+#endif /* CONFIG_BOARD_SPECIFIC_VERSION */
 
 /* I2C ports */
 const struct i2c_port_t i2c_ports[] = {
