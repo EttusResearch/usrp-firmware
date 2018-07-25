@@ -97,7 +97,11 @@ void board_config_pre_init(void)
 #ifdef CONFIG_BOARD_SPECIFIC_VERSION
 int board_get_version(void)
 {
-	/* counting starts at 0 ... */
+	/* counting starts at 0, if not initialized
+	 * pretend to be revision 2 */
+	if (eeprom_get_board_rev < 0)
+		return 1;
+
 	return eeprom_get_board_rev() + 1;
 }
 #endif /* CONFIG_BOARD_SPECIFIC_VERSION */
