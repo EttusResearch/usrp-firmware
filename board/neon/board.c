@@ -55,11 +55,6 @@ const struct power_signal_info power_signal_list[] = {
 };
 BUILD_ASSERT(ARRAY_SIZE(power_signal_list) == POWER_SIGNAL_COUNT);
 
-static void board_init(void)
-{
-	gpio_enable_interrupt(GPIO_SYS_RTC_RST_L);
-}
-DECLARE_HOOK(HOOK_INIT, board_init, HOOK_PRIO_DEFAULT);
 
 static int led_state;
 static void heartbeat_led(void)
@@ -182,3 +177,30 @@ struct ec_thermal_config thermal_params[] = {
 	{{C_TO_K(80), C_TO_K(85), C_TO_K(95)}, {0,0,0}, C_TO_K(50), C_TO_K(80)},	/* Board sensor near main power supply section */
 };
 BUILD_ASSERT(ARRAY_SIZE(thermal_params) == TEMP_SENSOR_COUNT);
+
+struct ec_thermal_config thermal_params_alternate[] = {
+	/* {Twarn, Thigh, Thalt}, fan_off, fan_max */
+	{{C_TO_K(50), C_TO_K(65), C_TO_K(95)}, {0,0,0}, C_TO_K(30), C_TO_K(80)},	/* Internal TMP468 sensor */
+	{{C_TO_K(80), C_TO_K(85), C_TO_K(95)}, {0,0,0}, C_TO_K(50), C_TO_K(80)},	/* AP Diode */
+	{{C_TO_K(80), C_TO_K(85), C_TO_K(95)}, {0,0,0}, C_TO_K(50), C_TO_K(80)},	/* Board sensor near RF FE Amps for channel A */
+	{{C_TO_K(80), C_TO_K(85), C_TO_K(95)}, {0,0,0}, C_TO_K(50), C_TO_K(80)},	/* Board sensor near RF FE Amps for channel B */
+	{{C_TO_K(80), C_TO_K(85), C_TO_K(95)}, {0,0,0}, C_TO_K(50), C_TO_K(80)},	/* Board sensor near main power supply section */
+};
+BUILD_ASSERT(ARRAY_SIZE(thermal_params_alternate) == TEMP_SENSOR_COUNT);
+
+static void board_init(void)
+{
+	int i;
+
+	gpio_enable_interrupt(GPIO_SYS_RTC_RST_L);
+
+	if (eeprom_get_enclosure()) {
+		ccprintf("Enclosure version ... using alternative thermal parameters\n");
+		for (i = 0; i < TEMP_SENSOR_COUNT; i++)
+			memcpy(&thermal_params[i], &thermal_params_alternate[i],
+			       sizeof(thermal_params[i]));
+	} else {
+		ccprintf("Board only version ... using default thermal parameters\n");
+	}
+}
+DECLARE_HOOK(HOOK_INIT, board_init, HOOK_PRIO_DEFAULT);

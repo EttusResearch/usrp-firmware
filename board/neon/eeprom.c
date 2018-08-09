@@ -20,6 +20,7 @@
 
 #define EEPROM_AUTOBOOT_FLAG (1 << 0)
 #define EEPROM_FAN_PRESENT (1 << 1)
+#define EEPROM_ENCLOSURE_FLAG (1 << 3)
 
 #define DEFAULT_FAN_MIN 3800
 #define DEFAULT_FAN_MAX 13000
@@ -142,6 +143,18 @@ int eeprom_get_fan_max(int fan)
 		return DEFAULT_FAN_MAX;
 
 	return FAN_GET_MAX(flags);
+}
+
+int eeprom_get_enclosure(void)
+{
+	int ret;
+
+	/* if not initialized, don't assume enclosure */
+	ret = eeprom_check_initialized();
+	if (ret)
+		return 0;
+
+	return ntohl(eeprom.mcu_flags[0]) & EEPROM_ENCLOSURE_FLAG;
 }
 
 int eeprom_get_board_rev(void)
