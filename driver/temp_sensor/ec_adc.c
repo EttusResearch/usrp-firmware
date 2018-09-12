@@ -12,6 +12,10 @@
 #include "thermistor.h"
 #include "util.h"
 
+#if defined(CONFIG_STM32_INTERNAL_TEMP)
+int stm32_calculate_internal_temp(int temp_raw);
+#endif
+
 /* Get temperature from requested sensor */
 static int get_temp(int idx, int *temp_ptr)
 {
@@ -30,8 +34,10 @@ static int get_temp(int idx, int *temp_ptr)
 	 *  2. Place function here with ifdef
 	 *  3. define it on board.h
 	 */
-#ifdef CONFIG_THERMISTOR_NCP15WB
+#if defined(CONFIG_THERMISTOR_NCP15WB)
 	*temp_ptr = ncp15wb_calculate_temp((uint16_t) temp_raw);
+#elif defined(CONFIG_STM32_INTERNAL_TEMP)
+	*temp_ptr = stm32_calculate_internal_temp(temp_raw);
 #else
 #error "Unknown thermistor for ec_adc"
 	return EC_ERROR_UNKNOWN;

@@ -390,6 +390,11 @@
 #define STM32_FMPI2C_RXDR(n)       REG32(stm32_i2c_reg(n, 0x24))
 #define STM32_FMPI2C_TXDR(n)       REG32(stm32_i2c_reg(n, 0x28))
 
+#define STM32_TC1                  30 /* In degree C*/
+#define STM32_TC2                  110 /* In degree C*/
+#define STM32_TS_CAL1              REG16(0x1fff7a2c)
+#define STM32_TS_CAL2              REG16(0x1fff7a2e)
+
 /* --- Power / Reset / Clocks --- */
 #define STM32_PWR_CSR               REG32(STM32_PWR_BASE + 0x04)
 
@@ -844,6 +849,7 @@ typedef volatile struct stm32_spi_regs stm32_spi_regs_t;
 #define STM32_ADC_JSQR             REG32(STM32_ADC1_BASE + 0x38)
 #define STM32_ADC_JDR(n)           REG32(STM32_ADC1_BASE + 0x3C + ((n)&3) * 4)
 #define STM32_ADC_DR               REG32(STM32_ADC1_BASE + 0x4C)
+#define STM32_ADC_CCR              REG32(STM32_ADC1_BASE + 0x304)
 
 /* --- Comparators --- */
 

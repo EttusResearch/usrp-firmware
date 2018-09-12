@@ -220,6 +220,19 @@ int adc_read_channel(enum adc_channel ch)
 	       value * adc->factor_mul / adc->factor_div + adc->shift;
 }
 
+#ifdef CONFIG_STM32_INTERNAL_TEMP
+
+int stm32_calculate_internal_temp(int temp_raw)
+{
+	int temp;
+
+	temp = ((int32_t)STM32_TC2 - (int32_t)STM32_TC1) *
+		(temp_raw - STM32_TS_CAL1) / ((int32_t)STM32_TS_CAL2 - (int32_t)STM32_TS_CAL1) + STM32_TC1;
+
+	return temp;
+}
+#endif
+
 static void adc_init(void)
 {
 	/*
@@ -228,6 +241,10 @@ static void adc_init(void)
 	 * So the ADC clock is 8MHz.
 	 */
 	clock_enable_module(MODULE_ADC, 1);
+
+#ifdef CONFIG_STM32_INTERNAL_TEMP
+	STM32_ADC_CCR |= (1 << 23);
+#endif
 
 	/*
 	 * ADC clock is divided with respect to AHB, so no delay needed
