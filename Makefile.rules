@@ -648,6 +648,15 @@ flash: $(out)/ec.bin
 		-c "set BUILD_DIR $(out)"\
 		-f $(openocd-cfg-flash)
 
+openocd-cfg-debug = $(or $(wildcard $(BDIR)/openocd-debug.cfg),\
+	$(error Board $(BOARD) doesn't support OpenOCD debugging))
+
+.PHONY: debug
+debug: $(out)/ec.bin
+	openocd -c "set BOARD $(BOARD)"\
+		-c "set BUILD_DIR $(out)"\
+		-f $(openocd-cfg-debug)
+
 .PHONY: flash_ec
 flash_ec: $(out)/ec.bin
 	./util/flash_ec --board $(BOARD) --image $(out)/ec.bin --port $(PORT)
