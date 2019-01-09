@@ -280,3 +280,16 @@ DECLARE_CONSOLE_COMMAND(pmbus, command_pmbus,
 			"vout/voutset/iout/temp/cntl/id idx [value] ",
 			"Read/write PMBUS");
 #endif
+
+#ifdef CONFIG_TEMP_SENSOR_PMBUS
+int pmbus_temp_get_val(int idx, int *temp_ptr)
+{
+	int rv, v;
+
+	rv = pmbus_read_temp(idx, &v);
+	if (!rv)
+		*temp_ptr = C_TO_K(v);
+
+	return rv;
+}
+#endif

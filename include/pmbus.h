@@ -105,5 +105,14 @@ int pmbus_read_ic_dev_id(enum pmbus_id id, int *data);
  */
 int pmbus_read_ic_dev_rev(enum pmbus_id id, int *data);
 
-#endif  /* __CROS_EC_PMBUS_H */
+/**
+ * Function to wrap the pmbus_read_temp() function in the temp sensor
+ * API
+ *
+ * @param Temperature sensor index (should match PMBUS device index)
+ * @param temp_ptr Output temperature in Kelvin
+ * @return EC_SUCCESS or EC_ERROR_UNKNOWN / EC_PARAM1
+ */
+int pmbus_temp_get_val(int idx, int *temp_ptr);
 
+#endif  /* __CROS_EC_PMBUS_H */
