@@ -103,6 +103,7 @@ common-$(CONFIG_ONEWIRE)+=onewire.o
 common-$(CONFIG_PECI_COMMON)+=peci.o
 common-$(CONFIG_POWER_BUTTON)+=power_button.o
 common-$(CONFIG_POWER_BUTTON_X86)+=power_button_x86.o
+common-$(CONFIG_PMBUS)+=pmbus.o
 common-$(CONFIG_PSTORE)+=pstore_commands.o
 common-$(CONFIG_PWM)+=pwm.o
 common-$(CONFIG_PWM_KBLIGHT)+=pwm_kblight.o

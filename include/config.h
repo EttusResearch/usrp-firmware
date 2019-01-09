@@ -1249,6 +1249,7 @@
 #undef  CONFIG_CMD_PD_FLASH
 #define CONFIG_CMD_PECI
 #undef  CONFIG_CMD_PLL
+#undef  CONFIG_CMD_PMBUS
 #undef  CONFIG_CMD_PMU
 #define CONFIG_CMD_POWERINDEBUG
 #undef  CONFIG_CMD_POWERLED
@@ -4009,7 +4010,11 @@
  *
  * To reserve a new PID, use go/usb.
  */
+/* USB Product ID. */
+
 #undef CONFIG_USB_PID
+/* Common pmbus code */
+#undef CONFIG_PMBUS
 
 /* PPC needs to be informed of CC polarity */
 #undef CONFIG_USBC_PPC_POLARITY
