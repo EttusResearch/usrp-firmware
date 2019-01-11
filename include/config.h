@@ -1222,6 +1222,7 @@
 #define CONFIG_CMD_HASH
 #define CONFIG_CMD_HCDEBUG
 #undef  CONFIG_CMD_HOSTCMD
+#undef	CONFIG_CMD_I2C_MUX
 #undef  CONFIG_CMD_I2CWEDGE
 #undef  CONFIG_CMD_I2C_PROTECT
 #define CONFIG_CMD_I2C_SCAN
@@ -2148,6 +2149,7 @@
 #undef CONFIG_I2C_PASSTHROUGH
 #undef CONFIG_I2C_PASSTHRU_RESTRICTED
 #undef CONFIG_I2C_VIRTUAL_BATTERY
+#undef CONFIG_I2C_MUX
 
 /*
  * Define this option if an i2c bus may be unpowered at a certain point during

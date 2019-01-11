@@ -15,6 +15,7 @@
 #include "i2c.h"
 #include "i2c_bitbang.h"
 #include "i2c_private.h"
+#include "i2c_mux.h"
 #include "system.h"
 #include "task.h"
 #include "usb_pd.h"
@@ -57,7 +58,7 @@ static uint8_t port_protected[I2C_PORT_COUNT + I2C_BITBANG_PORT_COUNT];
  */
 static int i2c_port_is_locked(int port)
 {
-#ifdef CONFIG_I2C_MULTI_PORT_CONTROLLER
+#if defined(CONFIG_I2C_MULTI_PORT_CONTROLLER) || defined(CONFIG_I2C_MUX)
 	/* Test the controller, not the port */
 	port = i2c_port_to_controller(port);
 #endif
@@ -89,6 +90,20 @@ const struct i2c_port_t *get_i2c_port(const int port)
 	return NULL;
 }
 
+static int __i2c_xfer(const int port, const uint16_t addr_flags,
+		      const uint8_t *out, int out_size,
+		      uint8_t *in, int in_size, int flags)
+{
+	const struct i2c_port_t *i2c_port = get_i2c_port(port);
+
+	if (i2c_port->drv)
+		return i2c_port->drv->xfer(i2c_port, addr_flags, out, out_size,
+					   in, in_size, flags);
+
+	return chip_i2c_xfer(port, addr_flags, out, out_size, in, in_size,
+			     flags);
+}
+
 static int chip_i2c_xfer_with_notify(const int port,
 				     const uint16_t slave_addr_flags,
 				     const uint8_t *out, int out_size,
@@ -96,7 +111,11 @@ static int chip_i2c_xfer_with_notify(const int port,
 {
 	int ret;
 	uint16_t addr_flags = slave_addr_flags;
-	const struct i2c_port_t *i2c_port = get_i2c_port(port);
+#ifdef CONFIG_I2C_MUX
+	enum i2c_mux_id id;
+	int parent;
+	int chan;
+#endif
 
 	if (IS_ENABLED(CONFIG_I2C_XFER_BOARD_CALLBACK))
 		i2c_start_xfer_notify(port, slave_addr_flags);
@@ -107,12 +126,22 @@ static int chip_i2c_xfer_with_notify(const int port,
 		 * remove the flag so it won't confuse chip driver.
 		 */
 		addr_flags &= ~I2C_FLAG_PEC;
-	if (i2c_port->drv)
-		ret = i2c_port->drv->xfer(i2c_port, addr_flags,
-					  out, out_size, in, in_size, flags);
-	else
-		ret = chip_i2c_xfer(port, addr_flags,
-				    out, out_size, in, in_size, flags);
+
+#ifdef CONFIG_I2C_MUX
+	if (i2c_port_is_muxed(port)) {
+		i2c_mux_get_cfg(port, &id, &chan, &parent);
+		i2c_mux_lock(id);
+		i2c_mux_select_chan(id, chan);
+
+		ret = __i2c_xfer(parent, addr_flags, out, out_size, in,
+				    in_size, flags);
+	} else {
+#endif
+	ret = __i2c_xfer(port, addr_flags, out, out_size, in, in_size,
+			    flags);
+#ifdef CONFIG_I2C_MUX
+	}
+#endif
 
 	if (IS_ENABLED(CONFIG_I2C_XFER_BOARD_CALLBACK))
 		i2c_end_xfer_notify(port, slave_addr_flags);
@@ -122,6 +151,11 @@ static int chip_i2c_xfer_with_notify(const int port,
 				 in, in_size);
 	}
 
+#ifdef CONFIG_I2C_MUX
+	if (i2c_port_is_muxed(port)) {
+		i2c_mux_unlock(id);
+	}
+#endif
 	return ret;
 }
 
@@ -206,7 +240,7 @@ int i2c_xfer(const int port,
 
 void i2c_lock(int port, int lock)
 {
-#ifdef CONFIG_I2C_MULTI_PORT_CONTROLLER
+#if defined(CONFIG_I2C_MULTI_PORT_CONTROLLER) || defined(CONFIG_I2C_MUX)
 	/* Lock the controller, not the port */
 	port = i2c_port_to_controller(port);
 #endif
