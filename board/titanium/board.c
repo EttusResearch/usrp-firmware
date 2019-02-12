@@ -43,6 +43,37 @@ static void board_init(void)
 }
 DECLARE_HOOK(HOOK_INIT, board_init, HOOK_PRIO_DEFAULT);
 
+int extpower_is_present(void)
+{
+	/* There is no internal power on this board */
+	return 1;
+}
+
+#ifdef CONFIG_ADC
+/* ADC channels */
+const struct adc_t adc_channels[] = {
+	[ADC1_18]		= {"VSense", 1, 1, 0, STM32_AIN(18)},
+	[ADC1_17]		= {"VRef", 3300, 4096, 0, STM32_AIN(17)},
+	[VMON_0V9]		= {"VMON: 0.9V", 3300, 4096, 0, STM32_AIN(0)},
+	[VMON_0V85]		= {"VMON: 0.85V", 3300,	4096, 0, STM32_AIN(1)},
+	[VMON_0V925_DAC]	= {"VMON: 0.925V DAC", 3300, 4096, 0, STM32_AIN(2)},
+	[VMON_0V925_ADC]	= {"VMON: 0.925V ADC", 3300, 4096, 0, STM32_AIN(3)},
+	[VMON_DDRS_VMON_1V2]	= {"VMON: DDRS 1.2V", 3300, 4096, 0, STM32_AIN(4)},
+	[VMON_DDRN_VMON_1V2]	= {"VMON: DDRN 1.2V", 3300, 4096, 0, STM32_AIN(5)},
+	[VMON_1V8_ADC_AVCCAUX]	= {"VMON: 1.8V ADCVCCAUX", 3300, 4096, 0, STM32_AIN(6)},
+	[VMON_1V8_DAC_AVCCAUX]	= {"VMON: 1.8V DACVCCAUX", 3300, 4096, 0, STM32_AIN(7)},
+	[VMON_1V8]		= {"VMON: 1.8V", 3300, 4096, 0, STM32_AIN(8)},
+	[VMON_2V5]		= {"VMON: 2.5V", 3300, 4096, 0, STM32_AIN(9)},
+	[VMON_2V5_DAC_VTT]	= {"VMON: 2.5V DAC VTT", 3300, 4096, 0, STM32_AIN(10)},
+	[VMON_VIN_IMON]		= {"VMON: VIN IMON", 3300, 4096, 0, STM32_AIN(11)},
+	[VMON_1V8_CLK]		= {"VMON: 1V8 CLK", 2 * 3300, 4096, 0, STM32_AIN(12)},
+	[VMON_3V3]		= {"VMON: 3.3V", 2 * 3300, 4096, 0, STM32_AIN(13)},
+	[VMON_3V3_CLK]		= {"VMON: 3.3V CLK", 4950, 4096, 0, STM32_AIN(14)},
+	[VMON_3V7]		= {"VMON: 3.6V", 2 * 3300, 4096, 0, STM32_AIN(15)},
+};
+BUILD_ASSERT(ARRAY_SIZE(adc_channels) == ADC_CH_COUNT);
+#endif
+
 /* I2C ports */
 const struct i2c_port_t i2c_ports[] = {
 	{"core-pmbus", I2C_PORT_PMBUS, 400,

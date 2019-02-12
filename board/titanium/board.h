@@ -48,8 +48,6 @@
 #define CONFIG_POWER_BUTTON
 #define CONFIG_POWER_BUTTON_IGNORE_LID
 
-#ifndef __ASSEMBLER__
-
 /* Timer selection */
 #define TIM_CLOCK32 2
 #define TIM_WATCHDOG 11
@@ -57,13 +55,47 @@
 #define CONFIG_WP_ALWAYS
 
 #define CONFIG_PWM
+#define CONFIG_ADC
 
+#define CONFIG_POWER_COMMON
+#define CONFIG_CHIPSET_ZYNQMP
+
+#ifndef __ASSEMBLER__
+
+#ifdef CONFIG_ADC
+enum adc_channel {
+	ADC1_18 = 0,
+	ADC1_17,
+	VMON_0V9,
+	VMON_0V85,
+	VMON_0V925_DAC,
+	VMON_0V925_ADC,
+	VMON_DDRS_VMON_1V2,
+	VMON_DDRN_VMON_1V2,
+	VMON_1V8_ADC_AVCCAUX,
+	VMON_1V8_DAC_AVCCAUX,
+	VMON_1V8,
+	VMON_2V5,
+	VMON_2V5_DAC_VTT,
+	VMON_VIN_IMON,
+	VMON_1V8_CLK,
+	VMON_3V3,
+	VMON_3V3_CLK,
+	VMON_3V7,
+
+	/* Number of ADC Channels */
+	ADC_CH_COUNT
+};
+#endif
+
+#ifdef CONFIG_PWM
 enum pwm_channel {
 	PWM_CH_FAN0 = 0,
 	PWM_CH_FAN1,
 	/* Number of PWM Channels */
 	PWM_CH_COUNT
 };
+#endif
 
 #include "gpio_signal.h"
 
