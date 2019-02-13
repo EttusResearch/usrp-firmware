@@ -18,9 +18,21 @@
 #include "task.h"
 #include "timer.h"
 #include "util.h"
-
+#include "power.h"
 #include "power_button.h"
 #include "gpio_list.h"
+
+/* power signal list.  Must match order of enum power_signal. */
+const struct power_signal_info power_signal_list[] = {
+	{GPIO_MASTER_PG_MCU, POWER_SIGNAL_ACTIVE_HIGH, "MASTER_POWER_GOOD"},
+	{GPIO_PS_DONE, POWER_SIGNAL_ACTIVE_HIGH, "PS_DONE_ASSERTED"},
+	{GPIO_PS_INIT_L, POWER_SIGNAL_ACTIVE_LOW, "PS_INIT#_ASSERTED"},
+	{GPIO_PS_ERR_OUT, POWER_SIGNAL_ACTIVE_HIGH, "PS_ERR_OUT_ASSERTED"},
+	{GPIO_PS_ERR_STAT, POWER_SIGNAL_ACTIVE_HIGH, "PS_ERR_STAT_ASSERTED"},
+	{GPIO_BUT_RESET_L, POWER_SIGNAL_ACTIVE_LOW, "BUT_RESET#_ASSERTED"},
+};
+BUILD_ASSERT(ARRAY_SIZE(power_signal_list) == POWER_SIGNAL_COUNT);
+
 
 /* PWM channels. Must be in the exactly same order as in enum pwm_channel. */
 #ifdef CONFIG_PWM

@@ -7,6 +7,15 @@
 
 GPIO_INT(POWER_BUTTON_L,   PIN(D, 10), GPIO_INT_BOTH, power_button_interrupt)
 
+GPIO_INT(MASTER_PG_MCU,    PIN(B, 5),  GPIO_INT_BOTH, power_signal_interrupt)
+GPIO_INT(PS_DONE,          PIN(C, 13), GPIO_INT_BOTH, power_signal_interrupt)
+GPIO_INT(PS_INIT_L,        PIN(D, 4),  GPIO_INT_BOTH, power_signal_interrupt)
+GPIO_INT(PS_ERR_OUT,       PIN(D, 6),  GPIO_INT_BOTH, power_signal_interrupt)
+GPIO_INT(PS_ERR_STAT,      PIN(D, 7),  GPIO_INT_BOTH, power_signal_interrupt)
+GPIO_INT(BUT_RESET_L,      PIN(D, 9),  GPIO_INT_BOTH, power_signal_interrupt)
+
+
+
 /* Analog pins */
 GPIO(0V9_VMON,             PIN(A, 0),  GPIO_ANALOG)
 GPIO(CORE_VMON_0V85,       PIN(A, 1),  GPIO_ANALOG)
@@ -30,7 +39,7 @@ GPIO(VMON_2V5,             PIN(B, 1),  GPIO_ANALOG)
 GPIO(DDR4S_VDDQ_EN,        PIN(B, 2),  GPIO_OUT_LOW)
 /* PB3, PB4 are JTAG */
 /* TODO: This should be an IRQ */
-GPIO(MASTER_PG_MCU,        PIN(B, 5),  GPIO_INPUT)
+/*GPIO(MASTER_PG_MCU,        PIN(B, 5),  GPIO_INPUT) */
 GPIO(FAN1_TACH,            PIN(B, 6),  GPIO_INPUT)
 GPIO(FAN1_PWM,             PIN(B, 7),  GPIO_OUTPUT)
 /* These are called PS_STM_I2C_SCL/SCA in schematic */
@@ -60,20 +69,22 @@ GPIO(DDR4N_VTT_EN,         PIN(C, 10), GPIO_OUT_LOW)
 GPIO(ADC_VCCAUX_EN,        PIN(C, 11), GPIO_OUT_LOW)
 GPIO(3V3_CLK_EN,           PIN(C, 12), GPIO_OUT_LOW)
 /* This should be an IRQ? */
-GPIO(PS_DONE,              PIN(C, 13), GPIO_INPUT)
+//GPIO(PS_DONE,              PIN(C, 13), GPIO_INPUT)//
 /* PC14 and PC15 are OSC in/out */
 
 GPIO(PS_MODE_0,            PIN(D, 0),  GPIO_OUTPUT)
 GPIO(PS_MODE_1,            PIN(D, 1),  GPIO_OUTPUT)
 GPIO(PS_MODE_2,            PIN(D, 2),  GPIO_OUTPUT)
+UNIMPLEMENTED(PS_MODE_3)
+
 GPIO(MCU_LED_L,            PIN(D, 3),  GPIO_OUTPUT)
 /* Should these be IRQs? */
-GPIO(PS_INIT_L,            PIN(D, 4),  GPIO_INPUT)
+/*GPIO(PS_INIT_L,            PIN(D, 4),  GPIO_INPUT) */
 GPIO(PS_PROG_L,            PIN(D, 5),  GPIO_INPUT)
-GPIO(PS_ERR_OUT,           PIN(D, 6),  GPIO_INPUT)
-GPIO(PS_ERR_STAT,          PIN(D, 7),  GPIO_INPUT)
+/*GPIO(PS_ERR_OUT,           PIN(D, 6),  GPIO_INPUT) */
+/*GPIO(PS_ERR_STAT,          PIN(D, 7),  GPIO_INPUT) */
 /* D8 is missing in our package */
-GPIO(BUT_RESET_L,          PIN(D, 9),  GPIO_INPUT)
+/*GPIO(BUT_RESET_L,          PIN(D, 9),  GPIO_INPUT)*/
 /* see above for PD10 with IRQs */
 GPIO(DDR4N_VDDQ_EN,        PIN(D, 11), GPIO_OUT_LOW)
 GPIO(CORE_PMB_CNTL,        PIN(D, 12), GPIO_OUT_LOW)

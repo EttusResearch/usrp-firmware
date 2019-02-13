@@ -88,6 +88,17 @@ enum adc_channel {
 };
 #endif
 
+enum power_signal {
+	MASTER_PG_MCU = 0,
+	PS_DONE,
+	PS_INIT_L,
+	PS_ERR_OUT,
+	PS_ERR_STAT,
+	BUT_RESET_L,
+	/* Number of power signals */
+	POWER_SIGNAL_COUNT
+};
+
 #ifdef CONFIG_PWM
 enum pwm_channel {
 	PWM_CH_FAN0 = 0,
