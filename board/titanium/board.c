@@ -22,6 +22,15 @@
 #include "power_button.h"
 #include "gpio_list.h"
 
+static int led_state;
+static void board_second(void)
+{
+	gpio_set_level(GPIO_MCU_LED_L, !!led_state);
+
+	led_state = !led_state;
+}
+DECLARE_HOOK(HOOK_SECOND, board_second, HOOK_PRIO_DEFAULT);
+
 /* power signal list.  Must match order of enum power_signal. */
 const struct power_signal_info power_signal_list[] = {
 	{GPIO_MASTER_PG_MCU, POWER_SIGNAL_ACTIVE_HIGH, "MASTER_POWER_GOOD"},
