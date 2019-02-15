@@ -32,6 +32,10 @@
 #define CONFIG_PMBUS
 #define CONFIG_CMD_PMBUS
 
+#define CONFIG_TEMP_SENSOR
+#define CONFIG_TEMP_SENSOR_PMBUS
+#define CONFIG_CMD_TEMP_SENSOR
+
 #define CONFIG_CMD_FLASH
 #define CONFIG_CMD_RTC
 #define CONFIG_HOSTCMD_RTC
@@ -115,6 +119,16 @@ enum pmbus_id {
 	PMBUS_ID1,
 	/* Number of PMBUS devices */
 	PMBUS_DEV_COUNT,
+};
+#endif
+
+#ifdef CONFIG_TEMP_SENSOR
+enum temp_sensor_id {
+	TEMP_SENSOR_PMBUS_0 = 0,
+	TEMP_SENSOR_PMBUS_1,
+
+	/* Number of temperature sensors */
+	TEMP_SENSOR_COUNT,
 };
 #endif
 
