@@ -61,9 +61,15 @@
 
 #define CONFIG_PWM
 #define CONFIG_ADC
+#define CONFIG_CMD_ADC
+#define CONFIG_CMD_ADC_READ
 
 #define CONFIG_POWER_COMMON
 #define CONFIG_CHIPSET_ZYNQMP
+
+#define CONFIG_TEMP_SENSOR_EC_ADC
+#define CONFIG_STM32_INTERNAL_TEMP
+#define CONFIG_ADC_SAMPLE_TIME 7
 
 #ifndef __ASSEMBLER__
 
@@ -126,6 +132,7 @@ enum pmbus_id {
 enum temp_sensor_id {
 	TEMP_SENSOR_PMBUS_0 = 0,
 	TEMP_SENSOR_PMBUS_1,
+	TEMP_SENSOR_INTERNAL,
 
 	/* Number of temperature sensors */
 	TEMP_SENSOR_COUNT,

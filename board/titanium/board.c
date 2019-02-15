@@ -118,6 +118,7 @@ const unsigned int i2c_ports_used = ARRAY_SIZE(i2c_ports);
 const struct temp_sensor_t temp_sensors[] = {
 	{"PMBUS-0", TEMP_SENSOR_TYPE_BOARD, pmbus_temp_get_val, PMBUS_ID0},
 	{"PMBUS-1", TEMP_SENSOR_TYPE_BOARD, pmbus_temp_get_val, PMBUS_ID1},
+	{"EC Internal", TEMP_SENSOR_TYPE_BOARD, ec_adc_get_val, ADC1_18},
 };
 BUILD_ASSERT(ARRAY_SIZE(temp_sensors) == TEMP_SENSOR_COUNT);
 #endif
