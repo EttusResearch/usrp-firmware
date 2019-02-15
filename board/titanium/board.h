@@ -29,6 +29,8 @@
 #define CONFIG_TASK_PROFILING
 
 #define CONFIG_I2C
+#define CONFIG_PMBUS
+#define CONFIG_CMD_PMBUS
 
 #define CONFIG_CMD_FLASH
 #define CONFIG_CMD_RTC
@@ -104,6 +106,15 @@ enum pwm_channel {
 	PWM_CH_FAN1,
 	/* Number of PWM Channels */
 	PWM_CH_COUNT
+};
+#endif
+
+#ifdef CONFIG_PMBUS
+enum pmbus_id {
+	PMBUS_ID0 = 0,
+	PMBUS_ID1,
+	/* Number of PMBUS devices */
+	PMBUS_DEV_COUNT,
 };
 #endif
 

@@ -20,6 +20,7 @@
 #include "util.h"
 #include "power.h"
 #include "power_button.h"
+#include "pmbus.h"
 #include "gpio_list.h"
 
 static int led_state;
@@ -93,6 +94,13 @@ const struct adc_t adc_channels[] = {
 	[VMON_3V7]		= {"VMON: 3.6V", 2 * 3300, 4096, 0, STM32_AIN(15)},
 };
 BUILD_ASSERT(ARRAY_SIZE(adc_channels) == ADC_CH_COUNT);
+#endif
+
+#ifdef CONFIG_PMBUS
+const struct pmbus_dev pmbus_devs[] = {
+	{"TPSM846C23-Master", 0x36, I2C_PORT_PMBUS, PMBUS_VOUT_EXPONENT_DYNAMIC, GPIO_CORE_PMB_CNTL},
+	{"TPSM846C23-Slave",  0x35, I2C_PORT_PMBUS, -9, GPIO_CORE_PMB_CNTL},
+};
 #endif
 
 /* I2C ports */
