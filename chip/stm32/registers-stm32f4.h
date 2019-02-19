@@ -939,7 +939,7 @@ enum dma_channel {
 #define STM32_REQ_USART2_RX 4
 
 #define STM32_I2C1_TX_REQ_CH 1
-#define STM32_I2C1_RX_REQ_CH 1
+#define STM32_I2C1_RX_REQ_CH 0
 
 #define STM32_I2C2_TX_REQ_CH 7
 #define STM32_I2C2_RX_REQ_CH 7
