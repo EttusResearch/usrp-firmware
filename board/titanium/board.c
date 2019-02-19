@@ -160,10 +160,16 @@ const unsigned int i2c_ports_used = ARRAY_SIZE(i2c_ports);
 #ifdef CONFIG_TEMP_SENSOR
 #include "temp_sensor.h"
 #include "driver/temp_sensor/ec_adc.h"
+#include "driver/temp_sensor/tmp468.h"
 const struct temp_sensor_t temp_sensors[] = {
 	{"PMBUS-0", TEMP_SENSOR_TYPE_BOARD, pmbus_temp_get_val, PMBUS_ID0},
 	{"PMBUS-1", TEMP_SENSOR_TYPE_BOARD, pmbus_temp_get_val, PMBUS_ID1},
 	{"EC Internal", TEMP_SENSOR_TYPE_BOARD, ec_adc_get_val, ADC1_18},
+	{"TMP464 Internal", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_LOCAL},
+	{"TMP464 Remote1", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_REMOTE1},
+	{"RFSoC", TEMP_SENSOR_TYPE_CPU, tmp468_get_val, TMP468_REMOTE2},
+	{"TMP464 Remote3", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_REMOTE3},
+	{"TMP464 Remote4", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_REMOTE4},
 };
 BUILD_ASSERT(ARRAY_SIZE(temp_sensors) == TEMP_SENSOR_COUNT);
 #endif
