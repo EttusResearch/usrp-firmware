@@ -43,6 +43,51 @@ const struct power_signal_info power_signal_list[] = {
 };
 BUILD_ASSERT(ARRAY_SIZE(power_signal_list) == POWER_SIGNAL_COUNT);
 
+#ifdef CONFIG_I2C_MUX
+#define TCA954X_I2C_ADDR 0x70
+#include "i2c_mux.h"
+#include "driver/i2cmux_tca954x.h"
+struct i2c_mux_t i2c_muxes[] = {
+	{I2C_PORT_DB, TCA954X_I2C_ADDR, -1, tca954x_select_chan },
+};
+BUILD_ASSERT(ARRAY_SIZE(i2c_muxes) == I2C_MUX_COUNT);
+
+#define I2C_PORT_DB0 10
+#define I2C_PORT_DB1 11
+#define I2C_PORT_TMP464 15
+struct i2c_mux_mapping i2c_mux_mappings[] = {
+	{ I2C_PORT_DB0, I2C_MUX_MB, 0},
+	{ I2C_PORT_DB1, I2C_MUX_MB, 1},
+	{ I2C_PORT_TMP464, I2C_MUX_MB, 5},
+};
+
+int i2c_mux_get_cfg(int port, enum i2c_mux_id *id, int *chan, int *parent)
+{
+	int p;
+
+	for (p = 0; p < ARRAY_SIZE(i2c_mux_mappings); p++)
+		if (i2c_mux_mappings[p].port == port) {
+			*id = i2c_mux_mappings[p].id;
+			*chan = i2c_mux_mappings[p].chan;
+			*parent = i2c_mux_get_parent(*id);
+			return 0;
+		}
+
+	return EC_ERROR_INVAL;
+}
+
+int i2c_port_to_controller(int port)
+{
+
+	int p;
+
+	if (i2c_port_is_muxed(port))
+		for (p = 0; p < ARRAY_SIZE(i2c_mux_mappings); p++)
+			if (i2c_mux_mappings[p].port == port)
+				return i2c_mux_get_parent(i2c_mux_mappings[p].id);
+	return port;
+}
+#endif
 
 /* PWM channels. Must be in the exactly same order as in enum pwm_channel. */
 #ifdef CONFIG_PWM

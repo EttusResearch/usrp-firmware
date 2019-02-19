@@ -47,7 +47,12 @@
 #define CONFIG_I2C_DEBUG
 #define I2C_PORT_PMBUS 1
 #define I2C_PORT_DB 2
+#define I2C_PORT_THERMAL 15
 #define I2C_PORT_SLAVE 0        /* needed for DMAC macros (ugh) */
+
+#define CONFIG_I2C_MUX
+#define CONFIG_I2C_MUX_TCA954X
+#define CONFIG_CMD_I2C_MUX
 
 #define CONFIG_SWITCH
 #define CONFIG_POWER_BUTTON
@@ -136,6 +141,15 @@ enum temp_sensor_id {
 
 	/* Number of temperature sensors */
 	TEMP_SENSOR_COUNT,
+};
+#endif
+
+#ifdef CONFIG_I2C_MUX
+enum i2c_mux_id {
+	I2C_MUX_MB = 0,
+
+	/* Number of I2C muxes */
+	I2C_MUX_COUNT
 };
 #endif
 
