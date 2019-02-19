@@ -2151,6 +2151,8 @@
 #undef CONFIG_I2C_VIRTUAL_BATTERY
 #undef CONFIG_I2C_MUX
 
+#undef CONFIG_I2C_MUX_TCA954X /* TCA954X I2C MUX */
+
 /*
  * Define this option if an i2c bus may be unpowered at a certain point during
  * runtime.  An example could be, a sensor bus which is not needed in lower

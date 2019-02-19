@@ -175,3 +175,6 @@ driver-$(CONFIG_MCDP28X0)+=mcdp28x0.o
 
 # Wireless Power Chargers
 driver-$(HAS_TASK_WPC) += wpc/p9221.o
+
+# i2c muxes
+driver-$(CONFIG_I2C_MUX_TCA954X)+=i2cmux_tca954x.o
