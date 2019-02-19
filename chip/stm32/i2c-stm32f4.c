@@ -591,7 +591,7 @@ int chip_i2c_xfer(const int port, const uint16_t slave_addr_flags,
 			STM32_I2C_CR1(port) |= STM32_I2C_CR1_STOP;
 	}
 
-	if (in_bytes) {
+	if (in_bytes && port != I2C_PORT_DB) {
 		int rv_start;
 
 		const struct dma_option *dma = dma_rx_option + port;
@@ -640,6 +640,73 @@ int chip_i2c_xfer(const int port, const uint16_t slave_addr_flags,
 		STM32_I2C_CR1(port) |= STM32_I2C_CR1_STOP;
 		STM32_I2C_CR2(port) &= ~STM32_I2C_CR2_LAST;
 		STM32_I2C_CR2(port) &= ~STM32_I2C_CR2_DMAEN;
+	} else if (in_bytes) {
+		/* Setup ACK/POS before sending start as per user manual */
+		if (in_bytes == 2)
+			STM32_I2C_CR1(port) |= STM32_I2C_CR1_POS;
+		else if (in_bytes != 1)
+			STM32_I2C_CR1(port) |= STM32_I2C_CR1_ACK;
+
+		if (!started) {
+			rv = send_start(port, addr_8bit | 0x01);
+			if (rv)
+				goto xfer_exit;
+		}
+
+		if (in_bytes == 1) {
+			/* Set stop immediately after ADDR cleared */
+			if (flags & I2C_XFER_STOP)
+				STM32_I2C_CR1(port) |= STM32_I2C_CR1_STOP;
+
+			rv = wait_sr1(port, STM32_I2C_SR1_RXNE);
+			if (rv)
+				goto xfer_exit;
+
+			in[0] = STM32_I2C_DR(port);
+		} else if (in_bytes == 2) {
+			/* Wait till the shift register is full */
+			rv = wait_sr1(port, STM32_I2C_SR1_BTF);
+			if (rv)
+				goto xfer_exit;
+
+			if (flags & I2C_XFER_STOP)
+				STM32_I2C_CR1(port) |= STM32_I2C_CR1_STOP;
+
+			in[0] = STM32_I2C_DR(port);
+			in[1] = STM32_I2C_DR(port);
+		} else {
+			/* Read all but last three */
+			for (i = 0; i < in_bytes - 3; i++) {
+				/* Wait for receive buffer not empty */
+				rv = wait_sr1(port, STM32_I2C_SR1_RXNE);
+				if (rv)
+					goto xfer_exit;
+
+				in[i] = STM32_I2C_DR(port);
+			}
+
+			/* Wait for BTF (data N-2 in DR, N-1 in shift) */
+			rv = wait_sr1(port, STM32_I2C_SR1_BTF);
+			if (rv)
+				goto xfer_exit;
+
+			/* No more acking */
+			STM32_I2C_CR1(port) &= ~STM32_I2C_CR1_ACK;
+			in[i++] = STM32_I2C_DR(port);
+
+			/* Wait for BTF (data N-1 in DR, N in shift) */
+			rv = wait_sr1(port, STM32_I2C_SR1_BTF);
+			if (rv)
+				goto xfer_exit;
+
+			/* If this is the last byte, queue stop condition */
+			if (flags & I2C_XFER_STOP)
+				STM32_I2C_CR1(port) |= STM32_I2C_CR1_STOP;
+
+			/* Read the last two bytes */
+			in[i++] = STM32_I2C_DR(port);
+			in[i++] = STM32_I2C_DR(port);
+		}
 	}
 
  xfer_exit:
