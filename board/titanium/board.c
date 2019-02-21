@@ -101,6 +101,9 @@ BUILD_ASSERT(ARRAY_SIZE(pwm_channels) == PWM_CH_COUNT);
 /* Initialize board. */
 static void board_init(void)
 {
+	/* Set core supply to 850 mV */
+	pmbus_set_volt_out(PMBUS_ID0, 850/* mV */);
+
 	/* No power control yet */
 	/* Go to S3 state */
 	hook_notify(HOOK_CHIPSET_STARTUP);
