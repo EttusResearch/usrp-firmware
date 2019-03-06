@@ -58,6 +58,16 @@ static const struct power_seq_op g3s0_seq[] = {
 	{ GPIO_PS_SRST_L, 1, 0 },
 };
 
+static const struct power_seq_op s0por_seq[] = {
+	{ GPIO_PS_POR_L, 0, 65 },
+	{ GPIO_PS_POR_L, 1, 0 },
+};
+
+static const struct power_seq_op s0srst_seq[] = {
+	{ GPIO_PS_SRST_L, 0, 5 },
+	{ GPIO_PS_SRST_L, 1, 0 },
+};
+
 /**
  * Step through the power sequence table and do corresponding GPIO operations.
  *
@@ -189,7 +199,6 @@ static int command_zynqmp(int argc, char **argv)
 		return EC_ERROR_PARAM_COUNT;
 
 	if (!strcasecmp(argv[1], "status")) {
-		// gpioget() ...
 		ccprintf("ZynqMP status:\nPS_DONE:\t%d\nPS_INIT_L:\t%d\nPS_PROG_L:\t%d\nPS_ERR_OUT:\t%d\nPS_STAT:\t%d\n",
 			 gpio_get_level(GPIO_PS_DONE), gpio_get_level(GPIO_PS_INIT_L),
 			 gpio_get_level(GPIO_PS_PROG_L), gpio_get_level(GPIO_PS_ERR_OUT),
@@ -197,6 +206,12 @@ static int command_zynqmp(int argc, char **argv)
 	} else if (!strcasecmp(argv[1], "boot")) {
 		ccprintf("ZynqMP: Booting using bootmode: %s\n", bootmode_to_str(bootmode));
 		power_seq_run(&g3s0_seq[0], ARRAY_SIZE(g3s0_seq));
+	} else if (!strcasecmp(argv[1], "por")) {
+		ccprintf("ZynqMP: Resetting (POR) ... \n");
+		power_seq_run(&s0por_seq[0], ARRAY_SIZE(s0por_seq));
+	} else if (!strcasecmp(argv[1], "srst")) {
+		ccprintf("ZynqMP: Resetting (SRST) ... \n");
+		power_seq_run(&s0srst_seq[0], ARRAY_SIZE(s0srst_seq));
 	} else if (!strcasecmp(argv[1], "bootmode")) {
 		if (argc > 2) {
 			ccprintf("ZynqMP: Setting 'bootmode' to '%s'\n", argv[2]);
@@ -211,6 +226,6 @@ static int command_zynqmp(int argc, char **argv)
 	return rv;
 }
 DECLARE_CONSOLE_COMMAND(zynqmp, command_zynqmp,
-			"bootmode/status/boot idx [jtag|emmc] ",
+			"bootmode/status/boot/por/srst idx [jtag|emmc] ",
 			"Misc commands for Xilinx ZynqMP based boards");
 #endif
