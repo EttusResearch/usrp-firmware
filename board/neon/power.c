@@ -7,6 +7,7 @@
 #include "clock.h"
 #include "common.h"
 #include "power.h"
+#include "eeprom.h"
 #include "system.h"
 #include "task.h"
 #include "util.h"
@@ -56,7 +57,11 @@ enum power_state power_chipset_init(void)
 			return POWER_S0;
 		}
 	} else if (!(system_get_reset_flags() & RESET_FLAG_AP_OFF)) {
-		/* make sure we come up if EC crashes */
+        /* Auto-power on ? */
+        if (eeprom_get_autoboot())
+            chipset_exit_hard_off();
+
+        /* make sure we come up if EC crashes */
 		if (system_get_reset_flags() & RESET_FLAG_SOFT)
 			chipset_exit_hard_off();
 
