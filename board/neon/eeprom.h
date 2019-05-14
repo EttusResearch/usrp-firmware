@@ -16,9 +16,9 @@ struct usrp_neon_eeprom {
 	uint16_t rev;
 	uint8_t serial[8];
 	uint8_t eth_addr0[ETH_ALEN];
-	uint8_t __pad_0[2];
+	uint16_t dt_compat;
 	uint8_t eth_addr1[ETH_ALEN];
-	uint8_t __pad_1[2];
+	uint16_t mcu_compat;
 	uint8_t eth_addr2[ETH_ALEN];
 	uint8_t __pad_2[2];
 	uint32_t crc;
