@@ -36,6 +36,8 @@ static const uint32_t USRP_EEPROM_MAGIC = 0xF008AD10;
 
 static struct usrp_neon_eeprom eeprom;
 
+void eeprom_init(void);
+
 static int eeprom_check_initialized(void)
 {
 	/* this has to be good enough for now ... */
@@ -62,7 +64,13 @@ static int eeprom_check_crc(void)
 static int command_eeprom_info(int argc, char **argv)
 {
 	if (eeprom_check_initialized()) {
-		ccprintf("EEPROM not initialized\n");
+		ccprintf("Error: EEPROM was not initialized\n");
+	}
+	/* always reload the eeprom information, this is useful for
+	debugging in case the EEPROM content was changed from the AP */
+	eeprom_init();
+	if (eeprom_check_initialized()) {
+		ccprintf("Error: EEPROM reinitialization failed\n");
 		return EC_ERROR_UNKNOWN;
 	}
 
