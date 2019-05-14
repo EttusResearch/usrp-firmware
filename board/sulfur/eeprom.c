@@ -11,6 +11,7 @@
 #include "hooks.h"
 #include "util.h"
 #include "i2c.h"
+#include "crc.h"
 
 #define htons htobe16
 #define htonl htobe32
@@ -19,6 +20,9 @@
 #define ntohl htonl
 
 #define EEPROM_AUTOBOOT_FLAG (1 << 0)
+
+#define N310_PID 0x4242
+#define N300_PID 0x4240
 
 #define DEFAULT_FAN_MIN 3800
 #define DEFAULT_FAN_MAX 13000
@@ -39,6 +43,20 @@ static int eeprom_check_initialized(void)
 	return -1;
 }
 
+static int eeprom_check_crc(void)
+{
+	const uint32_t *ptr;
+
+	crc32_init();
+	for (ptr = &(eeprom.magic); ptr < (&eeprom.crc); ptr++)
+		crc32_hash32(*ptr);
+
+	if (eeprom.crc == crc32_result())
+		return 0;
+	else
+		return -1;
+}
+
 static int command_eeprom_info(int argc, char **argv)
 {
 	if (eeprom_check_initialized()) {
@@ -46,30 +64,47 @@ static int command_eeprom_info(int argc, char **argv)
 		return EC_ERROR_UNKNOWN;
 	}
 
+	ccprintf("EEPROM version:\t%d\n", ntohl(eeprom.version));
 	ccprintf("Serial:\t\t%s\n", eeprom.serial);
-	ccprintf("Pid/Rev:\t%04x,Rev%u\n", ntohs(eeprom.pid),
-		 ntohs(eeprom.rev)+1);
+	ccprintf("Pid/Rev:\t%04x %04x ", ntohs(eeprom.pid),
+		ntohs(eeprom.rev));
+	if (ntohs(eeprom.pid) == N310_PID)
+		 ccprintf("(ni,n310-rev%x)\n", ntohs(eeprom.rev)+1);
+	else if (ntohs(eeprom.pid) == N300_PID)
+		 ccprintf("(ni,n300-rev%x)\n", ntohs(eeprom.rev)+1);
+	else
+		ccprintf("(unknown)\n");
 	ccprintf("MCU flags:\t%08x\n\t\t%08x\n\t\t%08x\n\t\t%08x\n",
-		 eeprom.mcu_flags[0], eeprom.mcu_flags[1],
-		 eeprom.mcu_flags[2], eeprom.mcu_flags[3]);
+		ntohl(eeprom.mcu_flags[0]), ntohl(eeprom.mcu_flags[1]),
+		ntohl(eeprom.mcu_flags[2]), ntohl(eeprom.mcu_flags[3]));
 	ccprintf("Eth0 Addr:\t%02x:%02x:%02x:%02x:%02x:%02x\n",
-		 eeprom.eth_addr0[0], eeprom.eth_addr0[1],
-		 eeprom.eth_addr0[2], eeprom.eth_addr0[3],
-		 eeprom.eth_addr0[4], eeprom.eth_addr0[5]);
+		eeprom.eth_addr0[0], eeprom.eth_addr0[1],
+		eeprom.eth_addr0[2], eeprom.eth_addr0[3],
+		eeprom.eth_addr0[4], eeprom.eth_addr0[5]);
 	ccprintf("Eth1 Addr:\t%02x:%02x:%02x:%02x:%02x:%02x\n",
-		 eeprom.eth_addr1[0], eeprom.eth_addr1[1],
-		 eeprom.eth_addr1[2], eeprom.eth_addr1[3],
-		 eeprom.eth_addr1[4], eeprom.eth_addr1[5]);
+		eeprom.eth_addr1[0], eeprom.eth_addr1[1],
+		eeprom.eth_addr1[2], eeprom.eth_addr1[3],
+		eeprom.eth_addr1[4], eeprom.eth_addr1[5]);
 	ccprintf("Eth2 Addr:\t%02x:%02x:%02x:%02x:%02x:%02x\n",
-		 eeprom.eth_addr2[0], eeprom.eth_addr2[1],
-		 eeprom.eth_addr2[2], eeprom.eth_addr2[3],
-		 eeprom.eth_addr2[4], eeprom.eth_addr2[5]);
+		eeprom.eth_addr2[0], eeprom.eth_addr2[1],
+		eeprom.eth_addr2[2], eeprom.eth_addr2[3],
+		eeprom.eth_addr2[4], eeprom.eth_addr2[5]);
+	if (ntohl(eeprom.version) >= 2)
+	{
+		ccprintf("DT/MCU-Compat:\t%04x %04x\n",
+			ntohs(eeprom.dt_compat), ntohs(eeprom.mcu_compat));
+	}
+	ccprintf("CRC:\t\t%08x (%s)\n",
+		ntohl(eeprom.crc), eeprom_check_crc() ? "matches": "doesn't match!");
+	ccprintf("\nInterpretation of MCU flags:\n");
+	ccprintf("Autoboot:\t%u\n",
+		ntohl(eeprom.mcu_flags[0]) & EEPROM_AUTOBOOT_FLAG);
 	ccprintf("Fan0\t\tmin:%u RPM\tmax:%u RPM\n",
-		 FAN_GET_MIN(htonl(eeprom.mcu_flags[1]) & 0xffff),
-		 FAN_GET_MAX(htonl(eeprom.mcu_flags[1]) & 0xffff));
+		FAN_GET_MIN(htonl(eeprom.mcu_flags[1]) & 0xffff),
+		FAN_GET_MAX(htonl(eeprom.mcu_flags[1]) & 0xffff));
 	ccprintf("Fan1\t\tmin:%u RPM\tmax:%u RPM\n",
-		 FAN_GET_MIN((htonl(eeprom.mcu_flags[1]) >> 16) & 0xffff),
-		 FAN_GET_MAX((htonl(eeprom.mcu_flags[1]) >> 16) & 0xffff));
+		FAN_GET_MIN((htonl(eeprom.mcu_flags[1]) >> 16) & 0xffff),
+		FAN_GET_MAX((htonl(eeprom.mcu_flags[1]) >> 16) & 0xffff));
 
 	return EC_SUCCESS;
 }
