@@ -20,7 +20,7 @@ struct usrp_neon_eeprom {
 	uint8_t eth_addr1[ETH_ALEN];
 	uint16_t mcu_compat;
 	uint8_t eth_addr2[ETH_ALEN];
-	uint8_t __pad_2[2];
+	uint16_t rev_compat;
 	uint32_t crc;
 } __packed;
 

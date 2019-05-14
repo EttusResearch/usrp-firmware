@@ -102,6 +102,11 @@ static int command_eeprom_info(int argc, char **argv)
 		ccprintf("DT/MCU-Compat:\t%04x %04x\n",
 			ntohs(eeprom.dt_compat), ntohs(eeprom.mcu_compat));
 	}
+	if (ntohl(eeprom.version) >= 3)
+	{
+		ccprintf("Rev-Compat:\t%04x\n",
+			ntohs(eeprom.rev_compat));
+	}
 	ccprintf("CRC:\t\t%08x (%s)\n",
 		ntohl(eeprom.crc), eeprom_check_crc() ? "matches": "doesn't match!");
 	ccprintf("\nInterpretation of MCU flags:\n");
