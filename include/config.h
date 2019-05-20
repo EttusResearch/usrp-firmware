@@ -2308,6 +2308,9 @@
 /* Support NXP PCAL6408 I/O expander. */
 #undef CONFIG_IO_EXPANDER_PCAL6408
 
+/* Support TI TCA64xx I/O expander. */
+#undef CONFIG_IO_EXPANDER_TCA64XX
+
 /* Number of IO Expander ports */
 #undef CONFIG_IO_EXPANDER_PORT_COUNT
 
