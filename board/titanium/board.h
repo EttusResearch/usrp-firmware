@@ -78,7 +78,18 @@
 #define CONFIG_STM32_INTERNAL_TEMP
 #define CONFIG_ADC_SAMPLE_TIME 7
 
+#define CONFIG_IO_EXPANDER_TCA64XX
+#define CONFIG_IO_EXPANDER
+
 #ifndef __ASSEMBLER__
+
+#ifdef CONFIG_IO_EXPANDER
+enum ioex_ports {
+	IOEX_PWR_DB,
+
+	CONFIG_IO_EXPANDER_PORT_COUNT,
+};
+#endif
 
 #ifdef CONFIG_ADC
 enum adc_channel {

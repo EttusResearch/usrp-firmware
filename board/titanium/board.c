@@ -55,10 +55,12 @@ BUILD_ASSERT(ARRAY_SIZE(i2c_muxes) == I2C_MUX_COUNT);
 #define I2C_PORT_DB0 10
 #define I2C_PORT_DB1 11
 #define I2C_PORT_TMP464 15
+#define I2C_PORT_PWR 17
 struct i2c_mux_mapping i2c_mux_mappings[] = {
 	{ I2C_PORT_DB0, I2C_MUX_MB, 0},
 	{ I2C_PORT_DB1, I2C_MUX_MB, 1},
 	{ I2C_PORT_TMP464, I2C_MUX_MB, 5},
+	{ I2C_PORT_PWR, I2C_MUX_MB, 7},
 };
 
 int i2c_mux_get_cfg(int port, enum i2c_mux_id *id, int *chan, int *parent)
@@ -99,6 +101,7 @@ BUILD_ASSERT(ARRAY_SIZE(pwm_channels) == PWM_CH_COUNT);
 #endif
 
 /* Initialize board. */
+#include "tca64xx.h"
 static void board_init(void)
 {
 	/* Set core supply to 850 mV */
@@ -175,4 +178,11 @@ const struct temp_sensor_t temp_sensors[] = {
 	{"TMP464 Remote4", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_REMOTE4},
 };
 BUILD_ASSERT(ARRAY_SIZE(temp_sensors) == TEMP_SENSOR_COUNT);
+#endif
+
+#ifdef CONFIG_IO_EXPANDER
+struct ioexpander_config_t ioex_config[] = {
+	{ I2C_PORT_PWR, TCA6416_I2C_ADDR(0), &tca6416_ioexpander_drv },
+};
+BUILD_ASSERT(ARRAY_SIZE(ioex_config) == CONFIG_IO_EXPANDER_PORT_COUNT);
 #endif
