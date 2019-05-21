@@ -104,6 +104,9 @@ BUILD_ASSERT(ARRAY_SIZE(pwm_channels) == PWM_CH_COUNT);
 #include "tca64xx.h"
 static void board_init(void)
 {
+	/* Wait for PMBUS devices to come up */
+	msleep(200);
+
 	/* Set core supply to 850 mV */
 	pmbus_set_volt_out(PMBUS_ID0, 850/* mV */);
 
