@@ -28,7 +28,7 @@
 #define CPRINTS(format, args...) cprints(CC_CHIPSET, format, ## args)
 
 /* ZynqMP bootmode */
-static uint8_t bootmode;
+static uint8_t bootmode = 0x06; /*eMMC mode as default*/
 
 /* Data structure for a GPIO operation for power sequencing */
 struct power_seq_op {
@@ -92,6 +92,7 @@ static int power_seq_run(const struct power_seq_op *power_seq_ops, int op_count)
 			continue;
 		msleep(power_seq_ops[i].delay);
 	}
+
 	return 0;
 }
 
@@ -148,11 +149,24 @@ static void force_shutdown(void)
 }
 DECLARE_DEFERRED(force_shutdown);
 
+static void configure_bootmode(uint8_t mode)
+{
+	gpio_set_level(GPIO_PS_MODE_0, !!(mode & 0x1));
+	gpio_set_level(GPIO_PS_MODE_1, !!(mode & 0x2));
+	gpio_set_level(GPIO_PS_MODE_2, !!(mode & 0x4));
+	gpio_set_level(GPIO_PS_MODE_3, !!(mode & 0x8));
+}
+
 static void power_button_changed(void)
 {
 	if (power_button_is_pressed()) {
 		if (chipset_in_state(CHIPSET_STATE_ANY_OFF))
 			chipset_exit_hard_off();
+
+		configure_bootmode(bootmode);
+
+		power_seq_run(&g3s0_seq[0], ARRAY_SIZE(g3s0_seq));
+
 		/* Delayed power down from S0/S3, cancel on PB release */
 		hook_call_deferred(&force_shutdown_data,
 				   FORCED_SHUTDOWN_DELAY);
@@ -211,6 +225,7 @@ static int command_zynqmp(int argc, char **argv)
 			 gpio_get_level(GPIO_PS_ERR_STAT));
 	} else if (!strcasecmp(argv[1], "boot")) {
 		ccprintf("ZynqMP: Booting using bootmode: %s\n", bootmode_to_str(bootmode));
+		configure_bootmode(bootmode);
 		power_seq_run(&g3s0_seq[0], ARRAY_SIZE(g3s0_seq));
 	} else if (!strcasecmp(argv[1], "por")) {
 		ccprintf("ZynqMP: Resetting (POR) ... \n");
@@ -222,6 +237,7 @@ static int command_zynqmp(int argc, char **argv)
 		if (argc > 2) {
 			ccprintf("ZynqMP: Setting 'bootmode' to '%s'\n", argv[2]);
 			bootmode = str_to_bootmode(argv[2]);
+			configure_bootmode(bootmode);
 		} else {
 			ccprintf("ZynqMP: 'bootmode' is '%s'\n", bootmode_to_str(bootmode));
 		}
