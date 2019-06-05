@@ -5,6 +5,7 @@
 
 /* ZynqMP chipset power control module for Chrome EC */
 
+#include "adc.h"
 #include "charge_state.h"
 #include "chipset.h"
 #include "common.h"
@@ -37,60 +38,93 @@ struct power_seq_op {
 	uint8_t level;
 	/* Number of milliseconds to delay after setting signal to level */
 	uint8_t delay;
+	uint8_t feedback_channel;
+	unsigned int feedback_mv;
+
 };
 BUILD_ASSERT(GPIO_COUNT < 256);
-
+BUILD_ASSERT(ADC_CH_COUNT < 256);
 
 static const struct power_seq_op g3s0_seq[] = {
-	{ GPIO_PS_POR_L, 0, 65 },
-	{ GPIO_CORE_PMB_CNTL, 1, 5 },
-	{ GPIO_1V8_EN, 1, 5 },
-	{ GPIO_DDR4S_VDDQ_EN, 1, 5 },
-	{ GPIO_3V3_EN, 1, 5 },
-	{ GPIO_PS_POR_L, 1, 0 },
-	{ GPIO_0V9_EN, 1, 0 },
-	{ GPIO_DDR4N_VDDQ_EN, 1, 5 },
-	{ GPIO_DDR4S_VDDQ_EN, 1, 5 },
-	{ GPIO_3V6_EN, 1, 5 },
-	{ GPIO_2V5_EN, 1, 5 },
-	{ GPIO_DDR4S_VTT_EN, 1, 5 },
-	{ GPIO_DDR4N_VTT_EN, 1, 5 },
-	{ GPIO_3V3_CLK_EN, 1, 5 },
-	{ GPIO_ADCVCC_EN, 1, 5 },
-	{ GPIO_ADC_VCCAUX_EN, 1, 5 },
-	{ GPIO_DACVCC_EN, 1, 5 },
-	{ GPIO_DAC_VCCAUX_EN, 1, 5 },
-	{ GPIO_DACVTT_EN, 1, 5 },
-	{ GPIO_PS_SRST_L, 1, 0 },
+	{ GPIO_PS_POR_L,      0, 65, ADC_CH_COUNT,         0 },
+	{ GPIO_CORE_PMB_CNTL, 1,  5, ADC_CH_COUNT,         0 },
+	{ GPIO_1V8_EN,        1,  5, VMON_1V8,             1800 * 0.9 },
+	{ GPIO_DDR4S_VDDQ_EN, 1,  5, VMON_1V2_DDRS,        1200 * 0.9 },
+	{ GPIO_3V3_EN,        1,  5, VMON_3V3,             3300 * 0.9 },
+	{ GPIO_PS_POR_L,      1,  0, ADC_CH_COUNT,         0 },
+	{ GPIO_0V9_EN,        1,  0, VMON_0V9,             900 * 0.9 },
+	{ GPIO_DDR4N_VDDQ_EN, 1,  5, VMON_1V2_DDRN,        1200 * 0.9 },
+	/* MGTAUX_EN */
+	{ GPIO_3V6_EN,        1,  5, VMON_3V7,             3600 * 0.9 },
+	{ GPIO_2V5_EN,        1,  5, VMON_2V5,             2500 * 0.9 },
+	{ GPIO_DDR4S_VTT_EN,  1,  5, ADC_CH_COUNT,         0 },
+	{ GPIO_DDR4N_VTT_EN,  1,  5, ADC_CH_COUNT,         0 },
+	{ GPIO_3V3_CLK_EN,    1,  5, ADC_CH_COUNT,         0 },
+	{ GPIO_ADCVCC_EN,     1, 10, ADC_CH_COUNT,         0 },
+	{ GPIO_ADC_VCCAUX_EN, 1,  5, ADC_CH_COUNT,         0 },
+	{ GPIO_DACVCC_EN,     1,  5, VMON_0V925_ADC_DAC,   925 * 0.9 },
+	{ GPIO_DAC_VCCAUX_EN, 1,  5, VMON_1V8_ADC_DAC_AUX, 1800 * 0.9 },
+	{ GPIO_DACVTT_EN,     1,  5, VMON_2V5_DAC_VTT,     2500 * 0.9 },
+	{ GPIO_PS_SRST_L,     1,  0, ADC_CH_COUNT,         0 },
 };
 
 static const struct power_seq_op s0por_seq[] = {
-	{ GPIO_PS_POR_L, 0, 65 },
-	{ GPIO_PS_POR_L, 1, 0 },
+	{ GPIO_PS_POR_L, 0, 65, ADC_CH_COUNT, 0 },
+	{ GPIO_PS_POR_L, 1,  0, ADC_CH_COUNT, 0 },
 };
 
 static const struct power_seq_op s0srst_seq[] = {
-	{ GPIO_PS_SRST_L, 0, 5 },
-	{ GPIO_PS_SRST_L, 1, 0 },
+	{ GPIO_PS_SRST_L, 0, 5, ADC_CH_COUNT, 0 },
+	{ GPIO_PS_SRST_L, 1, 0, ADC_CH_COUNT, 0 },
 };
+
+static int power_seq_adc_wait(enum adc_channel chan, int min_mv)
+{
+	int mv, timeout = 50;
+
+	for (;;) {
+		mv = adc_read_channel(chan);
+		if (mv >= min_mv)
+			break;
+
+		if (!timeout--) {
+			ccprintf("Failed to bringup zynqmp\n");
+			return EC_ERROR_TIMEOUT;
+		}
+
+		msleep(1);
+	}
+
+	return 0;
+}
 
 /**
  * Step through the power sequence table and do corresponding GPIO operations.
  *
- * @param	power_seq_ops	The pointer to the power sequence table.
+ * @param	op		The pointer to the power sequence table.
  * @param	op_count	The number of entries of power_seq_ops.
  * @return	non-zero if error, 0 otherwise.
  */
-static int power_seq_run(const struct power_seq_op *power_seq_ops, int op_count)
+static int power_seq_run(const struct power_seq_op *op, int op_count)
 {
-	int i;
+	int err;
 
-	for (i = 0; i < op_count; i++) {
-		gpio_set_level(power_seq_ops[i].signal,
-			       power_seq_ops[i].level);
-		if (!power_seq_ops[i].delay)
-			continue;
-		msleep(power_seq_ops[i].delay);
+	while (op_count--) {
+
+		gpio_set_level(op->signal,
+			       op->level);
+
+		if (op->delay)
+			msleep(op->delay);
+
+		if (op->feedback_channel < ADC_CH_COUNT) {
+			err = power_seq_adc_wait(op->feedback_channel,
+						 op->feedback_mv);
+			if (err)
+				return err;
+		}
+
+		op++;
 	}
 
 	return 0;
