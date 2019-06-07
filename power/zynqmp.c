@@ -54,7 +54,7 @@ static const struct power_seq_op g3s0_seq[] = {
 	{ GPIO_PS_POR_L,      1,  0, ADC_CH_COUNT,         0 },
 	{ GPIO_0V9_EN,        1,  0, VMON_0V9,             900 * 0.9 },
 	{ GPIO_DDR4N_VDDQ_EN, 1,  5, VMON_1V2_DDRN,        1200 * 0.9 },
-	/* MGTAUX_EN */
+	{ GPIO_MGTAUX_EN_MCU, 1,  5, ADC_CH_COUNT,         0 },
 	{ GPIO_3V6_EN,        1,  5, VMON_3V7,             3600 * 0.9 },
 	{ GPIO_2V5_EN,        1,  5, VMON_2V5,             2500 * 0.9 },
 	{ GPIO_DDR4S_VTT_EN,  1,  5, ADC_CH_COUNT,         0 },
