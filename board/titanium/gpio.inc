@@ -93,8 +93,7 @@ GPIO(1V8_EN,               PIN(D, 14), GPIO_OUT_LOW)
 GPIO(ADCVCC_EN,            PIN(D, 15), GPIO_OUT_LOW)
 
 GPIO(EC_INT_L,             PIN(E, 0),  GPIO_OUT_LOW)
-/* TODO: Is this in our output? */
-GPIO(RTC_CHARGE_L,         PIN(E, 1),  GPIO_INPUT)
+GPIO(RTC_CHARGE_L,         PIN(E, 1),  GPIO_OUT_LOW)
 /* TODO: Should default to high? */
 GPIO(DB_SWITCH_I2C_RST_L,  PIN(E, 2),  GPIO_OUT_HIGH)
 GPIO(MGTAUX_EN,            PIN(E, 3),  GPIO_OUT_LOW)
