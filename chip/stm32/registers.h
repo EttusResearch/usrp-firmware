@@ -67,6 +67,7 @@
 
 #define STM32_TIM_CR1(n)           STM32_TIM_REG(n, 0x00)
 #define STM32_TIM_CR1_CEN		BIT(0)
+#define STM32_TIM_CR1_ARPE		BIT(7)
 #define STM32_TIM_CR2(n)           STM32_TIM_REG(n, 0x04)
 #define STM32_TIM_SMCR(n)          STM32_TIM_REG(n, 0x08)
 #define STM32_TIM_DIER(n)          STM32_TIM_REG(n, 0x0C)
@@ -90,6 +91,7 @@
 #define STM32_TIM_CCER(n)          STM32_TIM_REG(n, 0x20)
 #define STM32_TIM_CCER_CC1E		BIT(0)
 #define STM32_TIM_CCER_CC1NE		BIT(2)
+#define STM32_TIM_CCER_CC2E		BIT(4)
 #define STM32_TIM_CNT(n)           STM32_TIM_REG(n, 0x24)
 #define STM32_TIM_PSC(n)           STM32_TIM_REG(n, 0x28)
 #define STM32_TIM_ARR(n)           STM32_TIM_REG(n, 0x2C)
