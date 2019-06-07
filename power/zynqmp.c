@@ -258,10 +258,6 @@ static int command_zynqmp(int argc, char **argv)
 			 gpio_get_level(GPIO_PS_DONE), gpio_get_level(GPIO_PS_INIT_L),
 			 gpio_get_level(GPIO_PS_PROG_L), gpio_get_level(GPIO_PS_ERR_OUT),
 			 gpio_get_level(GPIO_PS_ERR_STAT));
-	} else if (!strcasecmp(argv[1], "boot")) {
-		ccprintf("ZynqMP: Booting using bootmode: %s\n", bootmode_to_str(bootmode));
-		configure_bootmode(bootmode);
-		power_seq_run(&g3s0_seq[0], ARRAY_SIZE(g3s0_seq));
 	} else if (!strcasecmp(argv[1], "por")) {
 		ccprintf("ZynqMP: Resetting (POR) ... \n");
 		power_seq_run(&s0por_seq[0], ARRAY_SIZE(s0por_seq));
@@ -272,7 +268,6 @@ static int command_zynqmp(int argc, char **argv)
 		if (argc > 2) {
 			ccprintf("ZynqMP: Setting 'bootmode' to '%s'\n", argv[2]);
 			bootmode = str_to_bootmode(argv[2]);
-			configure_bootmode(bootmode);
 		} else {
 			ccprintf("ZynqMP: 'bootmode' is '%s'\n", bootmode_to_str(bootmode));
 		}
@@ -283,6 +278,6 @@ static int command_zynqmp(int argc, char **argv)
 	return rv;
 }
 DECLARE_CONSOLE_COMMAND(zynqmp, command_zynqmp,
-			"bootmode/status/boot/por/srst idx [jtag|emmc] ",
+			"bootmode/status/por/srst idx [jtag|emmc] ",
 			"Misc commands for Xilinx ZynqMP based boards");
 #endif
