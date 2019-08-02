@@ -54,6 +54,7 @@
 static int forcing_shutdown;
 static int wdt_reset;
 static int is_rev5;
+static int is_rev10;
 
 static void power_dump_signals(void)
 {
@@ -119,12 +120,24 @@ enum power_state power_chipset_init(void)
 {
 	int rev;
 
-	/* if error, i.e. not initialized, or 5, behave like 5 */
 	rev = eeprom_get_board_rev();
+
+	is_rev5 = 0;
+	#ifdef CONFIG_SULFUR_5V_WORKAROUND
+	/* if error, i.e. not initialized, or 5 or newer, behave like 5 */
 	if (rev < 0 || (rev + 1) >= 5) {
 		CPRINTS("Enabling rev5+ workaround");
 		is_rev5 = 1;
 	}
+	#endif
+	is_rev10 = 0;
+	#ifdef CONFIG_SULFUR_REV10
+	/* if error, i.e. not initialized, or 10 or newer, behave like 10 */
+	if (rev < 0 || (rev + 1) >= 10) {
+		CPRINTS("Enabling controlling of ENA_DB12V (rev10+)");
+		is_rev10 = 1;
+	}
+  #endif
 
 	if (system_jumped_to_this_image()) {
 		if ((power_get_signals() & IN_PGOOD_S0) == IN_PGOOD_S0) {
@@ -245,6 +258,13 @@ enum power_state power_handle_state(enum power_state state)
 		gpio_set_level(GPIO_POWER_EN_1V_L, 0);
 		usleep(5);
 		gpio_set_level(GPIO_POWER_EN_5V, 1);
+		usleep(5);
+		#ifdef CONFIG_SULFUR_REV10
+		if (is_rev10) {
+			CPRINTS("Enabling ENA_DB12V (rev10+)");
+			gpio_set_level(GPIO_ENA_DB12V, 1);
+    }
+		#endif
 
 		if (power_wait_signals_timeout(IN_PGOOD_S5,
 					       5 * MSEC) == EC_ERROR_TIMEOUT)
@@ -257,6 +277,13 @@ enum power_state power_handle_state(enum power_state state)
 		/* Call hooks before we remove power rails */
 		hook_notify(HOOK_CHIPSET_SHUTDOWN);
 
+		#ifdef CONFIG_SULFUR_REV10
+		if (is_rev10) {
+			CPRINTS("Disabling ENA_DB12V (rev10+)");
+			gpio_set_level(GPIO_ENA_DB12V, 0);
+    }
+		#endif
+		usleep(5);
 		gpio_set_level(GPIO_POWER_EN_5V, 0);
 		usleep(5);
 		gpio_set_level(GPIO_POWER_EN_1V_L, 1);
@@ -367,4 +394,3 @@ void wdt_reset_event(enum gpio_signal signal)
 	host_set_single_event(EC_HOST_EVENT_HANG_REBOOT);
 	hook_call_deferred(&force_reset_data, 10 * MSEC);
 }
-

@@ -23,6 +23,10 @@
 
 #define IRQ_TIM(n) CONCAT2(STM32_IRQ_TIM, n)
 
+/* Console output macros */
+#define CPUTS(outstr) cputs(CC_CHIPSET, outstr)
+#define CPRINTS(format, args...) cprints(CC_CHIPSET, format, ## args)
+
 struct fan_speed_t {
 	int fan_mode;
 
@@ -35,6 +39,8 @@ struct fan_speed_t {
 
 	uint32_t ccr_irq;
 };
+
+static int is_rev10;
 
 /* The prescaler is calculated as follows:
  * F_CNT = F_CLK / PSC is the counter freq
@@ -108,6 +114,9 @@ int fan_percent_to_rpm(int fan, int pct)
 void fan_set_enabled(int ch, int enabled)
 {
 	const struct fan_t *fan = fans + ch;
+	#ifdef CONFIG_SULFUR_REV10
+	static int fans_enabled = -1;
+	#endif
 
 	if (enabled) {
 		fan_speed_state[ch].sts = FAN_STATUS_CHANGING;
@@ -117,6 +126,18 @@ void fan_set_enabled(int ch, int enabled)
 	}
 
 	fan_speed_state[ch].enabled = enabled;
+
+	#ifdef CONFIG_SULFUR_REV10
+	if (is_rev10)
+	{
+		if (fans_enabled != (fan_speed_state[0].enabled | fan_speed_state[1].enabled))
+		{
+			fans_enabled = (fan_speed_state[0].enabled | fan_speed_state[1].enabled);
+			CPRINTS("%s ENA_FANS (rev10+)", fans_enabled ? "Enabling" : "Disabling");
+			gpio_set_level(GPIO_ENA_FAN, fans_enabled);
+		}
+	}
+	#endif
 }
 
 int fan_get_enabled(int ch)
@@ -227,6 +248,22 @@ void fan_channel_setup(int ch, unsigned int flags)
 void fan_init(void)
 {
 	int i;
+
+	is_rev10 = 0;
+	#ifdef CONFIG_SULFUR_REV10
+	{
+		int rev;
+		rev = eeprom_get_board_rev();
+		/* enable "is_rev10" for rev10+ */
+		/* if error, i.e. not initialized, or 10 or newer, behave like 10 */
+		if (rev < 0 || (rev + 1) >= 10) {
+			CPRINTS("Enabling controlling of ENA_FANS (rev10+)");
+			is_rev10 = 1;
+			/* configure GPIO "ENA_FAN" as output */
+			gpio_set_flags(GPIO_ENA_FAN, GPIO_OUT_LOW);
+		}
+	}
+	#endif
 
 	for (i = 0; i < FAN_CH_COUNT; i++)
 		fan_channel_setup(i, 0);
