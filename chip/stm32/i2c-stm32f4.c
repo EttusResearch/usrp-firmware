@@ -858,7 +858,9 @@ static void i2c_event_handler(int port)
 	volatile uint32_t i2c_sr2;
 	volatile uint32_t i2c_sr1;
 	static int rx_pending, buf_idx;
+#ifdef CONFIG_BOARD_I2C_SLAVE_ADDR_FLAGS
 	static uint16_t addr_8bit;
+#endif
 
 	volatile uint32_t dummy __attribute__((unused));
 
@@ -883,8 +885,10 @@ static void i2c_event_handler(int port)
 
 	/* Transfer matched our slave address */
 	if (i2c_sr1 & STM32_I2C_SR1_ADDR) {
+#ifdef CONFIG_BOARD_I2C_SLAVE_ADDR_FLAGS
 		addr_8bit = ((i2c_sr2 & STM32_I2C_SR2_DUALF) ?
 			STM32_I2C_OAR2(port) : STM32_I2C_OAR1(port)) & 0xfe;
+#endif
 		if (i2c_sr2 & STM32_I2C_SR2_TRA) {
 			/* Transmitter slave */
 			i2c_sr1 |= STM32_I2C_SR1_TXE;
