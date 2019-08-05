@@ -121,8 +121,8 @@ enum power_state power_chipset_init(void)
 
 	/* if error, i.e. not initialized, or 5, behave like 5 */
 	rev = eeprom_get_board_rev();
-	if (rev < 0 || (rev + 1) == 5) {
-		CPRINTS("Enabling rev5 workaround");
+	if (rev < 0 || (rev + 1) >= 5) {
+		CPRINTS("Enabling rev5+ workaround");
 		is_rev5 = 1;
 	}
 
