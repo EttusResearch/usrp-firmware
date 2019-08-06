@@ -2151,6 +2151,14 @@
 #undef CONFIG_I2C_VIRTUAL_BATTERY
 #undef CONFIG_I2C_MUX
 
+/*
+ * Define this option to disable per-address I2C passthrough protection.
+ * Note that passthrough protection may still be enabled by defining the
+ * CONFIG_I2C_PASSTHRU_RESTRICTED option to disallow passthrough to specific
+ * ports, regardless of the target address.
+ */
+#undef CONFIG_I2C_NO_PASSTHRU_PROTECTION
+
 #undef CONFIG_I2C_MUX_TCA954X /* TCA954X I2C MUX */
 
 /*

@@ -47,8 +47,10 @@
 static struct mutex port_mutex[I2C_CONTROLLER_COUNT + I2C_BITBANG_PORT_COUNT];
 /* A bitmap of the controllers which are currently servicing a request. */
 static uint32_t i2c_port_active_list;
-BUILD_ASSERT(ARRAY_SIZE(port_mutex) < 32);
+BUILD_ASSERT(I2C_CONTROLLER_COUNT < 32);
+#ifndef CONFIG_I2C_NO_PASSTHRU_PROTECTION
 static uint8_t port_protected[I2C_PORT_COUNT + I2C_BITBANG_PORT_COUNT];
+#endif
 
 /**
  * Non-deterministically test the lock status of the port.  If another task
@@ -1100,7 +1102,9 @@ static enum ec_status i2c_command_passthru(struct host_cmd_handler_args *args)
 	const struct ec_params_i2c_passthru *params = args->params;
 	const struct ec_params_i2c_passthru_msg *msg;
 	struct ec_response_i2c_passthru *resp = args->response;
+#ifndef CONFIG_I2C_NO_PASSTHRU_PROTECTION
 	const struct i2c_port_t *i2c_port;
+#endif
 	const uint8_t *out;
 	int in_len;
 	int ret, i;
@@ -1114,14 +1118,17 @@ static enum ec_status i2c_command_passthru(struct host_cmd_handler_args *args)
 		return EC_RES_ACCESS_DENIED;
 #endif
 
+#ifndef CONFIG_I2C_NO_PASSTHRU_PROTECTION
 	i2c_port = get_i2c_port(params->port);
 	if (!i2c_port)
 		return EC_RES_INVALID_PARAM;
+#endif
 
 	ret = check_i2c_params(args);
 	if (ret)
 		return ret;
 
+#ifndef CONFIG_I2C_NO_PASSTHRU_PROTECTION
 	if (port_protected[params->port] && i2c_port->passthru_allowed) {
 		for (i = 0; i < params->num_msgs; i++) {
 			if (!i2c_port->passthru_allowed(i2c_port,
@@ -1129,6 +1136,7 @@ static enum ec_status i2c_command_passthru(struct host_cmd_handler_args *args)
 				return EC_RES_ACCESS_DENIED;
 		}
 	}
+#endif
 
 	/* Loop and process messages */
 	resp->i2c_status = 0;
@@ -1218,6 +1226,7 @@ static enum ec_status i2c_command_passthru(struct host_cmd_handler_args *args)
 }
 DECLARE_HOST_COMMAND(EC_CMD_I2C_PASSTHRU, i2c_command_passthru, EC_VER_MASK(0));
 
+#ifndef CONFIG_I2C_NO_PASSTHRU_PROTECTION
 static void i2c_passthru_protect_port(uint32_t port)
 {
 	if (port < ARRAY_SIZE(port_protected))
@@ -1337,6 +1346,7 @@ static int command_i2cprotect(int argc, char **argv)
 DECLARE_CONSOLE_COMMAND(i2cprotect, command_i2cprotect,
 			"[port]",
 			"Protect I2C bus");
+#endif
 #endif
 
 #ifdef CONFIG_CMD_I2C_SCAN
