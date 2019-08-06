@@ -951,8 +951,24 @@ static void i2c_event_handler(int port)
 			host_buffer[buf_idx++] = STM32_I2C_DR(port);
 	}
 
-	/* STOPF or AF */
-	if (i2c_sr1 & (STM32_I2C_SR1_STOPF | STM32_I2C_SR1_AF)) {
+	/* STOPF */
+	if (i2c_sr1 & STM32_I2C_SR1_STOPF) {
+		/* Disable buffer interrupt */
+		STM32_I2C_CR2(port) &= ~STM32_I2C_CR2_ITBUFEN;
+
+#ifdef CONFIG_BOARD_I2C_SLAVE_ADDR_FLAGS
+		if (rx_pending &&
+		    (addr_8b >> 1) ==
+		    I2C_GET_ADDR(CONFIG_BOARD_I2C_SLAVE_ADDR_FLAGS))
+			i2c_process_board_command(0, addr_8bit, buf_idx);
+#endif
+		/* Clear STOPF: read SR1 and write CR1 */
+		dummy = STM32_I2C_SR1(port);
+		STM32_I2C_CR1(port) = i2c_cr1 | STM32_I2C_CR1_PE;
+	}
+
+	/* AF */
+	if (i2c_sr1 & STM32_I2C_SR1_AF) {
 		/* Disable buffer interrupt */
 		STM32_I2C_CR2(port) &= ~STM32_I2C_CR2_ITBUFEN;
 
@@ -967,12 +983,6 @@ static void i2c_event_handler(int port)
 
 		/* Clear AF */
 		STM32_I2C_SR1(port) &= ~STM32_I2C_SR1_AF;
-		/* Clear STOPF: read SR1 and write CR1 */
-		dummy = STM32_I2C_SR1(port);
-		STM32_I2C_CR1(port) = i2c_cr1 | STM32_I2C_CR1_PE;
-
-		/* No longer inhibit deep sleep after stop condition */
-		enable_sleep(SLEEP_MASK_I2C_SLAVE);
 	}
 
 	/* Enable again */
