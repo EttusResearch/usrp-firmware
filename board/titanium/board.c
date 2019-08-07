@@ -161,10 +161,9 @@ const struct pmbus_dev pmbus_devs[] = {
 
 /* I2C ports */
 const struct i2c_port_t i2c_ports[] = {
-	{"core-pmbus", I2C_PORT_PMBUS, 400,
-	 GPIO_CORE_PMB_CLK, GPIO_CORE_PMB_DAT},
-	{"db-switch", I2C_PORT_DB, 400,
-	 GPIO_DB_SWITCH_I2C_SCL, GPIO_DB_SWITCH_I2C_SDA},
+	{"core-pmbus", I2C_PORT_PMBUS, 400, GPIO_CORE_PMB_CLK, GPIO_CORE_PMB_DAT},
+	{"db-switch", I2C_PORT_DB, 400, GPIO_DB_SWITCH_I2C_SCL, GPIO_DB_SWITCH_I2C_SDA},
+	{"slave", I2C_PORT_SLAVE, 400, GPIO_SLAVE_I2C_SCL, GPIO_SLAVE_I2C_SDA},
 };
 const unsigned int i2c_ports_used = ARRAY_SIZE(i2c_ports);
 
