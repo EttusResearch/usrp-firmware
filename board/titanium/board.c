@@ -26,6 +26,7 @@
 #include "gpio_list.h"
 #include "host_control_gpio.h"
 #include "pwrsup.h"
+#include "fan.h"
 
 static int led_state;
 static void board_second(void)
@@ -147,7 +148,7 @@ int i2c_port_to_controller(int port)
 /* PWM channels. Must be in the exactly same order as in enum pwm_channel. */
 #ifdef CONFIG_PWM
 const struct pwm_t pwm_channels[] = {
-	{STM32_TIM(9), STM32_TIM_CH(2), PWM_CONFIG_ACTIVE_LOW, 25000},
+	{STM32_TIM(4), STM32_TIM_CH(1), PWM_CONFIG_ACTIVE_LOW, 25000},
 	{STM32_TIM(4), STM32_TIM_CH(2), PWM_CONFIG_ACTIVE_LOW, 25000},
 };
 BUILD_ASSERT(ARRAY_SIZE(pwm_channels) == PWM_CH_COUNT);
@@ -272,3 +273,37 @@ const struct ina2xx_t ina2xx_sensors[] = {
 };
 BUILD_ASSERT(ARRAY_SIZE(ina2xx_sensors) == INA2XX_COUNT);
 #endif
+
+/* Max and min rpm defaults are from the fan datasheet*/
+/* Fan Configuration */
+const struct fan_conf fan_conf_0 = {
+	.flags = FAN_USE_RPM_MODE,
+	.ch = 0,
+	.pgood_gpio = -1,
+	.enable_gpio = GPIO_FAN_0_EN,
+};
+
+const struct fan_conf fan_conf_1 = {
+	.flags = FAN_USE_RPM_MODE,
+	.ch = 1,
+	.pgood_gpio = -1,
+	.enable_gpio = GPIO_FAN_1_EN,
+};
+
+const struct fan_rpm fan_rpm_0 = {
+	.rpm_min = 3800,
+	.rpm_start = 8000,
+	.rpm_max = 12400,
+};
+
+const struct fan_rpm fan_rpm_1 = {
+	.rpm_min = 3800,
+	.rpm_start = 8000,
+	.rpm_max = 12400,
+};
+
+struct fan_t fans[] = {
+	[FAN_CH_0] = { .conf = &fan_conf_0, .rpm = &fan_rpm_0, },
+	[FAN_CH_1] = { .conf = &fan_conf_1, .rpm = &fan_rpm_1, },
+};
+BUILD_ASSERT(ARRAY_SIZE(fans) == FAN_CH_COUNT);

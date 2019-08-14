@@ -84,6 +84,7 @@
 /* Timer selection */
 #define TIM_CLOCK32 2
 #define TIM_WATCHDOG 5
+#define TIM_CAPTURE_FAN0_1 9
 
 #define CONFIG_WP_ALWAYS
 
@@ -111,6 +112,14 @@
 #define CONFIG_IO_EXPANDER_TCA64XX
 #define CONFIG_IO_EXPANDER
 #define CONFIG_CMD_LED
+
+#define CONFIG_FANS 2
+#define CONFIG_FAN_RPM_CUSTOM
+#define CONFIG_FAN_DYNAMIC
+/* Percentage to which all fans are set at initiation */
+#undef CONFIG_FAN_INIT_SPEED
+#define CONFIG_FAN_INIT_SPEED 30
+#define CONFIG_CMD_FANTEST
 
 #define CONFIG_KEYBOARD_PROTOCOL_MKBP
 #define CONFIG_MKBP_EVENT
@@ -281,6 +290,14 @@ enum ina2xx_id {
 };
 #define INA2XX_COUNT 7
 #endif
+
+enum fan_channel {
+	FAN_CH_0 = 0,
+	FAN_CH_1,
+
+	/* Number of FAN channels */
+	FAN_CH_COUNT
+};
 
 #include "gpio_signal.h"
 
