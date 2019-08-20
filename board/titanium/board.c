@@ -59,6 +59,7 @@ BUILD_ASSERT(ARRAY_SIZE(i2c_muxes) == I2C_MUX_COUNT);
 #define I2C_PORT_DB1_PWR 13
 #define I2C_PORT_MON 14
 #define I2C_PORT_TMP464 15
+#define I2C_PORT_RTC 16 /* RTC and EEPROM */
 #define I2C_PORT_PWR 17
 struct i2c_mux_mapping i2c_mux_mappings[] = {
 	{ I2C_PORT_DB0, I2C_MUX_MB, 0},
@@ -67,6 +68,7 @@ struct i2c_mux_mapping i2c_mux_mappings[] = {
 	{ I2C_PORT_DB1_PWR, I2C_MUX_MB, 3},
 	{ I2C_PORT_MON, I2C_MUX_MB, 4},
 	{ I2C_PORT_TMP464, I2C_MUX_MB, 5},
+	{ I2C_PORT_RTC, I2C_MUX_MB, 6},
 	{ I2C_PORT_PWR, I2C_MUX_MB, 7},
 };
 
