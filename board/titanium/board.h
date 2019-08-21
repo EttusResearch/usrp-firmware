@@ -187,6 +187,19 @@ enum i2c_mux_id {
 };
 #endif
 
+#ifdef CONFIG_INA219
+enum ina2xx_id {
+	INA2XX_0V9,
+	INA2XX_1V8,
+	INA2XX_3V6,
+	INA2XX_3V3,
+	INA2XX_2V5,
+	INA2XX_1V2N,
+	INA2XX_1V2S,
+};
+#define INA2XX_COUNT 7
+#endif
+
 #include "gpio_signal.h"
 
 #endif /* !__ASSEMBLER__ */

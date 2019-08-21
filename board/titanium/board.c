@@ -11,6 +11,7 @@
 #include "gpio.h"
 #include "hooks.h"
 #include "i2c.h"
+#include "ina2xx.h"
 #include "pwm.h"
 #include "pwm_chip.h"
 #include "gpio.h"
@@ -110,12 +111,6 @@ BUILD_ASSERT(ARRAY_SIZE(pwm_channels) == PWM_CH_COUNT);
 #include "tca64xx.h"
 static void board_init(void)
 {
-	/* Wait for PMBUS devices to come up */
-	msleep(200);
-
-	/* Set core supply to 850 mV */
-	pmbus_set_volt_out(PMBUS_ID0, 850/* mV */);
-
 	/* No power control yet */
 	/* Go to S3 state */
 	hook_notify(HOOK_CHIPSET_STARTUP);
@@ -195,4 +190,28 @@ struct ioexpander_config_t ioex_config[] = {
 	{ I2C_PORT_DB1_PWR, TCA6416_I2C_ADDR(0), &tca6416_ioexpander_drv },
 };
 BUILD_ASSERT(ARRAY_SIZE(ioex_config) == CONFIG_IO_EXPANDER_PORT_COUNT);
+#endif
+
+#ifdef CONFIG_INA219
+/* Default value for configuration register is 0x399f which allows for
+   continuous bus and shunt voltage measurement along with
+   highest voltage ranges and ADC resolution. However since we
+   know that the input current is not very high we can configure the PGA gain bits
+   to have lower shunt voltage range resulting in higher voltage resolution.
+   e.g. If the highest current is 20 A the the highest shunt voltage is
+   I * R = 2 mOhm * 20 A = 40 mV.
+   Selecting the PGA bits corresponding to a voltage range of +/- 40 mV
+   and keeping other bits the same as default results in a 0x219F value.
+   Refer http://www.ti.com/lit/ds/symlink/ina219.pdf
+   */
+const struct ina2xx_t ina2xx_sensors[] = {
+	{ "0V9",  I2C_PORT_MON, INA2XX_I2C_ADDR(0, 0), 0x219f, INA2XX_CALIB_1MA(2) },
+	{ "1V8",  I2C_PORT_MON, INA2XX_I2C_ADDR(0, 1), 0x219f, INA2XX_CALIB_1MA(2) },
+	{ "3V6",  I2C_PORT_MON, INA2XX_I2C_ADDR(0, 2), 0x219f, INA2XX_CALIB_1MA(2) },
+	{ "3V3",  I2C_PORT_MON, INA2XX_I2C_ADDR(1, 0), 0x219f, INA2XX_CALIB_1MA(2) },
+	{ "2V5",  I2C_PORT_MON, INA2XX_I2C_ADDR(1, 1), 0x219f, INA2XX_CALIB_1MA(2) },
+	{ "1V2N", I2C_PORT_MON, INA2XX_I2C_ADDR(2, 0), 0x219f, INA2XX_CALIB_1MA(2) },
+	{ "1V2S", I2C_PORT_MON, INA2XX_I2C_ADDR(2, 2), 0x219f, INA2XX_CALIB_1MA(2) },
+};
+BUILD_ASSERT(ARRAY_SIZE(ina2xx_sensors) == INA2XX_COUNT);
 #endif
