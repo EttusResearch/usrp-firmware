@@ -60,7 +60,6 @@ enum ina2xx_conv_time {
 #define INA2XX_MASK_EN_SUL         BIT(14)
 #define INA2XX_MASK_EN_SOL        BIT(15)
 
-
 /*
  * a0/a1 are the values connected to the address pins
  * gnd = 0, vcc = 1, sda = 2, scl = 3

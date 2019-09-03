@@ -66,6 +66,7 @@
 #define CONFIG_SWITCH
 #define CONFIG_POWER_BUTTON
 #define CONFIG_POWER_BUTTON_IGNORE_LID
+#define CONFIG_CMD_POWERSTATS
 
 /* Timer selection */
 #define TIM_CLOCK32 2
