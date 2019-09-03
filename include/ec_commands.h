@@ -6476,6 +6476,24 @@ struct ec_params_host_gpio_set {
 	uint8_t val;
 } __ec_align_size1;
 
+/*
+ *
+ */
+#define EC_CMD_REGULATOR_CONTROL 0x2A00
+struct ec_params_regulator_control {
+	uint8_t regulator;
+	uint8_t control;
+} __ec_align_size1;
+
+#define EC_CMD_REGULATOR_STATUS 0x2A01
+struct ec_params_regulator_status {
+	uint8_t regulator;
+} __ec_align_size1;
+
+struct ec_response_regulator_status {
+	uint8_t status;
+} __ec_align_size1;
+
 /*****************************************************************************/
 /*
  * Reserve a range of host commands for board-specific, experimental, or
