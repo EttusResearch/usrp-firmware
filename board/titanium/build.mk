@@ -11,3 +11,5 @@ CHIP_VARIANT:=stm32f412
 
 board-y := board.o
 board-y += power.o
+board-y += tlv_eeprom.o
+board-y += eeproms.o

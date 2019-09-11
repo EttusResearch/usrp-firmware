@@ -41,6 +41,7 @@
 #define CONFIG_HOSTCMD_RTC
 
 #define CONFIG_CRC8
+#define CONFIG_SW_CRC
 
 /* I2C ports configuration */
 #define CONFIG_I2C_MASTER
