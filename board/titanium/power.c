@@ -6,12 +6,19 @@
 
 #include "adc.h"
 #include "adc_chip.h"
+#include "board_power.h"
 #include "common.h"
 #include "console.h"
+#include "gpio.h"
+#include "hooks.h"
 #include "ina2xx.h"
+#include "ioexpander.h"
+#include "led.h"
 #include "power.h"
 #include "pmbus.h"
+#include "system.h"
 #include "temp_sensor.h"
+#include "timer.h"
 #include "util.h"
 
 struct rail_monitor {
@@ -235,3 +242,56 @@ DECLARE_CONSOLE_COMMAND(powerstats, command_powerstats,
 			"[details|dump]",
 			"Get motherboard power metrics.");
 #endif
+
+
+static enum power_status board_power_status = POWER_OFF;
+void set_board_power_status(enum power_status status)
+{
+	board_power_status = status;
+}
+
+enum power_status get_board_power_status(void)
+{
+	return board_power_status;
+}
+
+static void pwr_status(void)
+{
+	switch (board_power_status) {
+	case POWER_OFF:
+		set_pwrdb_led_color(LED_ID_PWR, LED_OFF);
+		set_pwrdb_led_color(LED_ID_PWR_BUTTON, LED_OFF);
+		break;
+	case POWER_INPUT_GOOD:
+		set_pwrdb_led_color(LED_ID_PWR, LED_AMBER);
+		set_pwrdb_led_color(LED_ID_PWR_BUTTON, LED_OFF);
+		break;
+	case POWER_INPUT_BAD:
+		/* TODO: Add blinking red support? */
+		set_pwrdb_led_color(LED_ID_PWR, LED_RED);
+		set_pwrdb_led_color(LED_ID_PWR_BUTTON, LED_RED);
+		break;
+	case POWER_GOOD:
+		set_pwrdb_led_color(LED_ID_PWR, LED_GREEN);
+		set_pwrdb_led_color(LED_ID_PWR_BUTTON, LED_GREEN);
+		break;
+	case POWER_BAD:
+		set_pwrdb_led_color(LED_ID_PWR, LED_RED);
+		set_pwrdb_led_color(LED_ID_PWR_BUTTON, LED_RED);
+		break;
+	}
+}
+DECLARE_HOOK(HOOK_SECOND, pwr_status, HOOK_PRIO_DEFAULT);
+
+void power_signal_changed(void)
+{
+	int v;
+
+	v = gpio_get_level(GPIO_BUT_RESET_L);
+
+	if (v)
+		set_board_power_status(POWER_INPUT_GOOD);
+	else
+		set_board_power_status(POWER_OFF);
+}
+DECLARE_HOOK(HOOK_INIT, power_signal_changed, HOOK_PRIO_DEFAULT);

@@ -6,6 +6,7 @@
 /* ZynqMP chipset power control module for Chrome EC */
 
 #include "adc.h"
+#include "board_power.h"
 #include "charge_state.h"
 #include "chipset.h"
 #include "common.h"
@@ -205,7 +206,7 @@ static void power_button_changed(void)
 		configure_bootmode(bootmode);
 
 		if (ioex_set_level(IOEX_PWRDB_12V_EN_L, 0))
-			goto err;
+			goto err1;
 
 		/* Turn-On Delay for LTC4234 is 72 ms. Use twice of that (150ms).
 		PMBUS device delay is 200 ms. Total 350 ms. */
@@ -215,11 +216,19 @@ static void power_button_changed(void)
 		pmbus_set_volt_out(PMBUS_ID0, 850/* mV */);
 
 		if (ioex_get_level(IOEX_PWRDB_VIN_PG, &v))
-			goto err;
+			goto err1;
 		if (!v)
-			goto err;
+			goto err1;
 
 		power_seq_run(&g3s0_seq[0], ARRAY_SIZE(g3s0_seq));
+
+		/* TODO: Need to wait here at all? How long? */
+		msleep(10);
+
+		if (!gpio_get_level(GPIO_MASTER_PG_MCU))
+			goto err2;
+
+		set_board_power_status(POWER_GOOD);
 
 		/* Delayed power down from S0/S3, cancel on PB release */
 		hook_call_deferred(&force_shutdown_data,
@@ -229,10 +238,19 @@ static void power_button_changed(void)
 		hook_call_deferred(&force_shutdown_data, -1);
 	}
 	return;
-err:
+err1:
 	/* Disable 12V power supply */
 	ioex_set_level(IOEX_PWRDB_12V_EN_L, 1);
 	ccprintf("Failed to turn on 12V power supply\n");
+	set_board_power_status(POWER_INPUT_BAD);
+	return;
+err2:
+	/* TODO: Run power down sequence to bring rails down */
+	/* Disable 12V power supply */
+	ioex_set_level(IOEX_PWRDB_12V_EN_L, 1);
+	ccprintf("Voltage regulators report incorrect power good signals\n");
+	set_board_power_status(POWER_BAD);
+	return;
 }
 DECLARE_HOOK(HOOK_POWER_BUTTON_CHANGE, power_button_changed, HOOK_PRIO_DEFAULT);
 

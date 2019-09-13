@@ -5,6 +5,7 @@
 /* NI Project Titanium Firmware */
 
 #include "adc_chip.h"
+#include "board_power.h"
 #include "common.h"
 #include "console.h"
 #include "ec_version.h"
