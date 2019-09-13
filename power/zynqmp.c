@@ -13,7 +13,9 @@
 #include "ec_commands.h"
 #include "gpio.h"
 #include "hooks.h"
+#include "ioexpander.h"
 #include "lid_switch.h"
+#include "pmbus.h"
 #include "power.h"
 #include "power_button.h"
 #include "system.h"
@@ -194,11 +196,28 @@ static void configure_bootmode(uint8_t mode)
 
 static void power_button_changed(void)
 {
+	int v;
+
 	if (power_button_is_pressed()) {
 		if (chipset_in_state(CHIPSET_STATE_ANY_OFF))
 			chipset_exit_hard_off();
 
 		configure_bootmode(bootmode);
+
+		if (ioex_set_level(IOEX_PWRDB_12V_EN_L, 0))
+			goto err;
+
+		/* Turn-On Delay for LTC4234 is 72 ms. Use twice of that (150ms).
+		PMBUS device delay is 200 ms. Total 350 ms. */
+		msleep(350);
+
+		/* Set core supply to 850 mV */
+		pmbus_set_volt_out(PMBUS_ID0, 850/* mV */);
+
+		if (ioex_get_level(IOEX_PWRDB_VIN_PG, &v))
+			goto err;
+		if (!v)
+			goto err;
 
 		power_seq_run(&g3s0_seq[0], ARRAY_SIZE(g3s0_seq));
 
@@ -209,6 +228,11 @@ static void power_button_changed(void)
 		/* Power button released, cancel deferred shutdown */
 		hook_call_deferred(&force_shutdown_data, -1);
 	}
+	return;
+err:
+	/* Disable 12V power supply */
+	ioex_set_level(IOEX_PWRDB_12V_EN_L, 1);
+	ccprintf("Failed to turn on 12V power supply\n");
 }
 DECLARE_HOOK(HOOK_POWER_BUTTON_CHANGE, power_button_changed, HOOK_PRIO_DEFAULT);
 
