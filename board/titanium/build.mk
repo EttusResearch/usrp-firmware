@@ -14,3 +14,4 @@ board-y += power.o
 board-y += tlv_eeprom.o
 board-y += eeproms.o
 board-y += db_pwr.o
+board-y += led.o

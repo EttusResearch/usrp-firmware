@@ -106,6 +106,7 @@
 
 #define CONFIG_IO_EXPANDER_TCA64XX
 #define CONFIG_IO_EXPANDER
+#define CONFIG_CMD_LED
 
 #ifndef __ASSEMBLER__
 
