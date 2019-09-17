@@ -49,6 +49,16 @@
 #define I2C_PORT_THERMAL 15
 #define I2C_PORT_SLAVE 0        /* needed for DMAC macros (ugh) */
 
+/* I2C ports downstream of mux */
+#define I2C_PORT_DB0 10
+#define I2C_PORT_DB0_PWR 11
+#define I2C_PORT_DB1 12
+#define I2C_PORT_DB1_PWR 13
+#define I2C_PORT_MON 14
+#define I2C_PORT_TMP464 15
+#define I2C_PORT_RTC 16 /* RTC and EEPROM */
+#define I2C_PORT_PWR 17
+
 #define CONFIG_I2C_MUX
 #define CONFIG_I2C_MUX_TCA954X
 #define CONFIG_CMD_I2C_MUX
