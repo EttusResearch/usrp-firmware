@@ -239,35 +239,42 @@ DECLARE_HOOK(HOOK_POWER_BUTTON_CHANGE, power_button_changed, HOOK_PRIO_DEFAULT);
 
 #ifdef CONFIG_CMD_ZYNQMP
 
-struct boot_mode {
-	const char *name;
-	int val;
+static const char *bootmodes[] = {
+	[0b0000] = "jtag",
+	[0b0001] = "qspi24",
+	[0b0010] = "qspi32",
+	[0b0011] = "sd0",
+	[0b0100] = "nand",
+	[0b0101] = "sd1",
+	[0b0110] = "emmc",
+	[0b0111] = "usb",
+	[0b1000] = "pjtag0",
+	[0b1001] = "pjtag1",
+	[0b1110] = "sd1ls",
 };
-
-static const struct boot_mode modes_lookup[] =  { { "jtag", 0}, { "emmc", 6 } };
 
 static int str_to_bootmode(const char *boot_mode)
 {
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(modes_lookup); i++)
-		if (!strcasecmp(modes_lookup[i].name, boot_mode))
-			return modes_lookup[i].val;
+	for (i = 0; i < ARRAY_SIZE(bootmodes); i++)
+		if (bootmodes[i] && !strcasecmp(bootmodes[i], boot_mode))
+			return i;
 
-	/* default to jtag */
-	return 0;
+	return -1;
 }
 
 static const char *bootmode_to_str(int bm)
 {
-	int i;
+	const char *str = NULL;
 
-	for (i = 0; i < ARRAY_SIZE(modes_lookup); i++)
-		if (modes_lookup[i].val == bm)
-			return modes_lookup[i].name;
+	if (bm < ARRAY_SIZE(bootmodes))
+	    str = bootmodes[bm];
 
-	/* default to jtag */
-	return 0;
+	if (!str)
+		return "unknown";
+
+	return str;
 }
 
 static int command_zynqmp(int argc, char **argv)
@@ -290,6 +297,13 @@ static int command_zynqmp(int argc, char **argv)
 		power_seq_run(&s0srst_seq[0], ARRAY_SIZE(s0srst_seq));
 	} else if (!strcasecmp(argv[1], "bootmode")) {
 		if (argc > 2) {
+			if (str_to_bootmode(argv[2]) < 0) {
+				ccprintf("valid bootmodes: ");
+				for (int i = 0; i < ARRAY_SIZE(bootmodes); i++)
+					ccprintf("%s ", bootmodes[i] ?: "\b");
+				ccprintf("\n");
+				return EC_ERROR_PARAM2;
+			}
 			ccprintf("ZynqMP: Setting 'bootmode' to '%s'\n", argv[2]);
 			bootmode = str_to_bootmode(argv[2]);
 		} else {
@@ -302,6 +316,6 @@ static int command_zynqmp(int argc, char **argv)
 	return rv;
 }
 DECLARE_CONSOLE_COMMAND(zynqmp, command_zynqmp,
-			"bootmode/status/por/srst idx [jtag|emmc] ",
+			"bootmode/status/por/srst",
 			"Misc commands for Xilinx ZynqMP based boards");
 #endif
