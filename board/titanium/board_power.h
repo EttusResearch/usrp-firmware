@@ -18,3 +18,5 @@ void set_board_power_status(enum power_status status);
 enum power_status get_board_power_status(void);
 
 void power_signal_changed_interrupt(enum gpio_signal signal);
+
+void power_signal_changed(void);

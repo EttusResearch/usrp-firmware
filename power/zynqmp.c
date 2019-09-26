@@ -72,6 +72,27 @@ static const struct power_seq_op g3s0_seq[] = {
 	{ GPIO_PS_SRST_L,         1,  0, ADC_CH_COUNT,         0 },
 };
 
+/* TODO: Use non-zero delays here like g3s0_seq? */
+static const struct power_seq_op s0g3_seq[] = {
+	{ GPIO_DACVTT_EN,     0,  0, ADC_CH_COUNT, 0 },
+	{ GPIO_DAC_VCCAUX_EN, 0,  0, ADC_CH_COUNT, 0 },
+	{ GPIO_DACVCC_EN,     0,  0, ADC_CH_COUNT, 0 },
+	{ GPIO_ADC_VCCAUX_EN, 0,  0, ADC_CH_COUNT, 0 },
+	{ GPIO_ADCVCC_EN,     0,  0, ADC_CH_COUNT, 0 },
+	{ GPIO_3V3_CLK_EN,    0,  0, ADC_CH_COUNT, 0 },
+	{ GPIO_DDR4N_VTT_EN,  0,  0, ADC_CH_COUNT, 0 },
+	{ GPIO_DDR4S_VTT_EN,  0,  0, ADC_CH_COUNT, 0 },
+	{ GPIO_2V5_EN,        0,  0, ADC_CH_COUNT, 0 },
+	{ GPIO_3V6_EN,        0,  0, ADC_CH_COUNT, 0 },
+	{ GPIO_MGTAUX_EN_MCU, 0,  0, ADC_CH_COUNT, 0 },
+	{ GPIO_DDR4N_VDDQ_EN, 0,  0, ADC_CH_COUNT, 0 },
+	{ GPIO_0V9_EN,        0,  0, ADC_CH_COUNT, 0 },
+	{ GPIO_3V3_EN,        0,  0, ADC_CH_COUNT, 0 },
+	{ GPIO_DDR4S_VDDQ_EN, 0,  0, ADC_CH_COUNT, 0 },
+	{ GPIO_1V8_EN,        0,  0, ADC_CH_COUNT, 0 },
+	{ GPIO_CORE_PMB_CNTL, 0,  0, ADC_CH_COUNT, 0 },
+};
+
 static const struct power_seq_op s0por_seq[] = {
 	{ GPIO_PS_POR_L, 0, 65, ADC_CH_COUNT, 0 },
 	{ GPIO_PS_POR_L, 1,  0, ADC_CH_COUNT, 0 },
@@ -184,6 +205,15 @@ static void force_shutdown(void)
 {
 	forcing_shutdown = 1;
 	task_wake(TASK_ID_CHIPSET);
+	if (power_button_is_pressed()) {
+		ccprintf("Forcing Board Shutdown...\n");
+		/* Call hooks before we drop power rails */
+		hook_notify(HOOK_CHIPSET_SHUTDOWN);
+		power_seq_run(&s0g3_seq[0], ARRAY_SIZE(s0g3_seq));
+		ioex_set_level(IOEX_PWRDB_12V_EN_L, 1);
+		power_signal_changed();
+		ccprintf("Force Shutdown complete!\n");
+	}
 }
 DECLARE_DEFERRED(force_shutdown);
 
@@ -202,6 +232,23 @@ static void power_button_changed(void)
 	if (power_button_is_pressed()) {
 		if (chipset_in_state(CHIPSET_STATE_ANY_OFF))
 			chipset_exit_hard_off();
+
+		/*
+		 * TODO: handle case where linux is manually shutdown so
+		 * POWER is GOOD and pressing power button should start linux
+		 * instead of doing nothing. For that to work we need some
+		 * signal from the AP to convey that it is in "power off" state
+		 * or/and maintain power state using power state management.
+		 * Having this code also prevents power sequence re-run
+		 * when the system is up and power button is pressed. Such signal
+		 * would also be necessary to trigger a safe power rail bring-down
+		 * after linux shuts down.
+		 */
+		if (get_board_power_status() == POWER_GOOD) {
+			hook_call_deferred(&force_shutdown_data,
+					FORCED_SHUTDOWN_DELAY);
+			return;
+		}
 
 		configure_bootmode(bootmode);
 
@@ -245,7 +292,7 @@ err1:
 	set_board_power_status(POWER_INPUT_BAD);
 	return;
 err2:
-	/* TODO: Run power down sequence to bring rails down */
+	power_seq_run(&s0g3_seq[0], ARRAY_SIZE(s0g3_seq));
 	/* Disable 12V power supply */
 	ioex_set_level(IOEX_PWRDB_12V_EN_L, 1);
 	ccprintf("Voltage regulators report incorrect power good signals\n");
@@ -253,7 +300,6 @@ err2:
 	return;
 }
 DECLARE_HOOK(HOOK_POWER_BUTTON_CHANGE, power_button_changed, HOOK_PRIO_DEFAULT);
-
 
 #ifdef CONFIG_CMD_ZYNQMP
 
