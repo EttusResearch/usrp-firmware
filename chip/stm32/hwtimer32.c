@@ -261,7 +261,7 @@ void hwtimer_setup_watchdog(void)
 	STM32_TIM_SMCR(TIM_WATCHDOG) = 0x0000;
 
 	/* AUto-reload value */
-	STM32_TIM_ARR(TIM_WATCHDOG) = CONFIG_AUX_TIMER_PERIOD_MS;
+	STM32_TIM32_ARR(TIM_WATCHDOG) = CONFIG_AUX_TIMER_PERIOD_MS;
 
 	/* Update prescaler: watchdog timer runs at 1KHz */
 	STM32_TIM_PSC(TIM_WATCHDOG) =
@@ -283,7 +283,7 @@ void hwtimer_setup_watchdog(void)
 
 void hwtimer_reset_watchdog(void)
 {
-	STM32_TIM_CNT(TIM_WATCHDOG) = 0x0000;
+	STM32_TIM32_CNT(TIM_WATCHDOG) = 0x0000;
 }
 
 #endif  /* CONFIG_WATCHDOG_HELP */
