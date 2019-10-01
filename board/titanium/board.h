@@ -81,7 +81,7 @@
 
 /* Timer selection */
 #define TIM_CLOCK32 2
-#define TIM_WATCHDOG 11
+#define TIM_WATCHDOG 5
 
 #define CONFIG_WP_ALWAYS
 
