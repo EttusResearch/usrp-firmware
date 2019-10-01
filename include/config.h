@@ -4377,6 +4377,13 @@
  */
 #define CONFIG_AUX_TIMER_PERIOD_MS (CONFIG_WATCHDOG_PERIOD_MS - 500)
 
+/*
+ * Specify the rate of the auxiliary timer in KHz. Usually this is 1 KHz,
+ * however some chips may not be able to set the prescaler that low.
+ */
+#undef CONFIG_AUX_TIMER_RATE_KHZ
+
+
 /*****************************************************************************/
 /* WebUSB config */
 

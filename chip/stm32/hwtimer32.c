@@ -244,6 +244,10 @@ const struct irq_priority __keep IRQ_PRIORITY(IRQ_WD)
 		= {IRQ_WD, 0}; /* put the watchdog at the highest
 					    priority */
 
+#ifndef CONFIG_AUX_TIMER_RATE_KHZ
+#define CONFIG_AUX_TIMER_RATE_KHZ 1
+#endif
+
 void hwtimer_setup_watchdog(void)
 {
 	/* Enable clock */
@@ -261,11 +265,11 @@ void hwtimer_setup_watchdog(void)
 	STM32_TIM_SMCR(TIM_WATCHDOG) = 0x0000;
 
 	/* AUto-reload value */
-	STM32_TIM32_ARR(TIM_WATCHDOG) = CONFIG_AUX_TIMER_PERIOD_MS;
+	STM32_TIM32_ARR(TIM_WATCHDOG) = CONFIG_AUX_TIMER_PERIOD_MS * CONFIG_AUX_TIMER_RATE_KHZ;
 
-	/* Update prescaler: watchdog timer runs at 1KHz */
+	/* Update prescaler: watchdog timer runs at 1 or 10 KHz */
 	STM32_TIM_PSC(TIM_WATCHDOG) =
-		(clock_get_timer_freq() / SECOND * MSEC) - 1;
+		(clock_get_timer_freq() / SECOND * MSEC / CONFIG_AUX_TIMER_RATE_KHZ) - 1;
 
 	/* Reload the pre-scaler */
 	STM32_TIM_EGR(TIM_WATCHDOG) = 0x0001;
