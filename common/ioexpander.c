@@ -9,6 +9,7 @@
 #include "gpio.h"
 #include "hooks.h"
 #include "ioexpander.h"
+#include "system.h"
 #include "util.h"
 
 #define CPRINTF(format, args...) cprintf(CC_GPIO, format, ## args)
@@ -151,6 +152,7 @@ int ioex_init(int ioex)
 static void ioex_init_default(void)
 {
 	const struct ioex_info *g = ioex_list;
+	int is_warm = system_jumped_to_this_image();
 	int i;
 
 	for (i = 0; i < CONFIG_IO_EXPANDER_PORT_COUNT; i++)
@@ -160,9 +162,16 @@ static void ioex_init_default(void)
 	 * in gpio.inc
 	 */
 	for (i = 0; i < IOEX_COUNT; i++, g++) {
-		if (g->mask && !(g->flags & GPIO_DEFAULT)) {
-			ioex_set_flags_by_mask(g->ioex, g->port,
-						g->mask, g->flags);
+		int flags = g->flags;
+		/*
+		 * If this is a warm reboot, don't set output levels, otherwise
+		 * this could kill the power rails
+		 */
+		if (is_warm)
+			flags &= ~(GPIO_LOW | GPIO_HIGH);
+
+		if (g->mask && !(flags & GPIO_DEFAULT)) {
+			ioex_set_flags_by_mask(g->ioex, g->port, g->mask, flags);
 		}
 	}
 
