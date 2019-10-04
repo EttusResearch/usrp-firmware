@@ -10,6 +10,7 @@
 #include "hooks.h"
 #include "ioexpander.h"
 #include "led.h"
+#include "system.h"
 #include "util.h"
 
 struct pwrdb_led {
@@ -37,16 +38,22 @@ BUILD_ASSERT(ARRAY_SIZE(led_color_states) == LED_ID_COUNT);
 
 void init_pwrdb_led_states(void)
 {
-	for (int i = 0; i < LED_ID_COUNT; i++)
-		led_color_states[i] = LED_OFF;
+	int is_jumped = system_jumped_to_this_image();
+	if (is_jumped == 0) {
+		for (int i = 0; i < LED_ID_COUNT; i++) {
+			led_color_states[i] = LED_OFF;
+			set_pwrdb_led_color(i, LED_OFF, 1 /* force */);
+		}
+	}
 }
 DECLARE_HOOK(HOOK_INIT, init_pwrdb_led_states, HOOK_PRIO_DEFAULT);
 
-int set_pwrdb_led_color(enum pwrdb_led_id led, enum pwrdb_led_color color)
+int set_pwrdb_led_color(enum pwrdb_led_id led, enum pwrdb_led_color color,
+			int force)
 {
 	int red = 1, green = 1;
 
-	if (led_color_states[led] == color)
+	if (led_color_states[led] == color && !force)
 		return EC_SUCCESS;
 
 	/*
@@ -106,13 +113,13 @@ static int command_led(int argc, char **argv)
 		return EC_ERROR_PARAM1;
 
 	if (!strcasecmp(argv[2], "off"))
-		set_pwrdb_led_color(id, LED_OFF);
+		set_pwrdb_led_color(id, LED_OFF, 1);
 	else if (!strcasecmp(argv[2], "red"))
-		set_pwrdb_led_color(id, LED_RED);
+		set_pwrdb_led_color(id, LED_RED, 1);
 	else if (!strcasecmp(argv[2], "green"))
-		set_pwrdb_led_color(id, LED_GREEN);
+		set_pwrdb_led_color(id, LED_GREEN, 1);
 	else if (!strcasecmp(argv[2], "amber"))
-		set_pwrdb_led_color(id, LED_AMBER);
+		set_pwrdb_led_color(id, LED_AMBER, 1);
 	else
 		return EC_ERROR_PARAM2;
 

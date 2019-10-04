@@ -23,4 +23,5 @@ enum pwrdb_led_id {
 	LED_ID_COUNT
 };
 
-int set_pwrdb_led_color(enum pwrdb_led_id led, enum pwrdb_led_color color);
+int set_pwrdb_led_color(enum pwrdb_led_id led, enum pwrdb_led_color color,
+			int force);

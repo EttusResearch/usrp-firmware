@@ -243,11 +243,38 @@ DECLARE_CONSOLE_COMMAND(powerstats, command_powerstats,
 			"Get motherboard power metrics.");
 #endif
 
-
 static enum power_status board_power_status = POWER_OFF;
+static void pwr_status(void)
+{
+	switch (board_power_status) {
+	case POWER_OFF:
+		set_pwrdb_led_color(LED_ID_PWR, LED_OFF, 0);
+		set_pwrdb_led_color(LED_ID_PWR_BUTTON, LED_OFF, 0);
+		break;
+	case POWER_INPUT_GOOD:
+		set_pwrdb_led_color(LED_ID_PWR, LED_AMBER, 0);
+		set_pwrdb_led_color(LED_ID_PWR_BUTTON, LED_OFF, 0);
+		break;
+	case POWER_INPUT_BAD:
+		/* TODO: Add blinking red support? */
+		set_pwrdb_led_color(LED_ID_PWR, LED_RED, 0);
+		set_pwrdb_led_color(LED_ID_PWR_BUTTON, LED_RED, 0);
+		break;
+	case POWER_GOOD:
+		set_pwrdb_led_color(LED_ID_PWR, LED_GREEN, 0);
+		set_pwrdb_led_color(LED_ID_PWR_BUTTON, LED_GREEN, 0);
+		break;
+	case POWER_BAD:
+		set_pwrdb_led_color(LED_ID_PWR, LED_RED, 0);
+		set_pwrdb_led_color(LED_ID_PWR_BUTTON, LED_RED, 0);
+		break;
+	}
+}
+
 void set_board_power_status(enum power_status status)
 {
 	board_power_status = status;
+	pwr_status();
 }
 
 enum power_status get_board_power_status(void)
@@ -255,43 +282,17 @@ enum power_status get_board_power_status(void)
 	return board_power_status;
 }
 
-static void pwr_status(void)
-{
-	switch (board_power_status) {
-	case POWER_OFF:
-		set_pwrdb_led_color(LED_ID_PWR, LED_OFF);
-		set_pwrdb_led_color(LED_ID_PWR_BUTTON, LED_OFF);
-		break;
-	case POWER_INPUT_GOOD:
-		set_pwrdb_led_color(LED_ID_PWR, LED_AMBER);
-		set_pwrdb_led_color(LED_ID_PWR_BUTTON, LED_OFF);
-		break;
-	case POWER_INPUT_BAD:
-		/* TODO: Add blinking red support? */
-		set_pwrdb_led_color(LED_ID_PWR, LED_RED);
-		set_pwrdb_led_color(LED_ID_PWR_BUTTON, LED_RED);
-		break;
-	case POWER_GOOD:
-		set_pwrdb_led_color(LED_ID_PWR, LED_GREEN);
-		set_pwrdb_led_color(LED_ID_PWR_BUTTON, LED_GREEN);
-		break;
-	case POWER_BAD:
-		set_pwrdb_led_color(LED_ID_PWR, LED_RED);
-		set_pwrdb_led_color(LED_ID_PWR_BUTTON, LED_RED);
-		break;
-	}
-}
-DECLARE_HOOK(HOOK_SECOND, pwr_status, HOOK_PRIO_DEFAULT);
-
 void power_signal_changed(void)
 {
-	int v;
+	int is_jumped = system_jumped_to_this_image();
+	if (is_jumped == 0) {
+		int v;
+		v = gpio_get_level(GPIO_BUT_RESET_L);
 
-	v = gpio_get_level(GPIO_BUT_RESET_L);
-
-	if (v)
-		set_board_power_status(POWER_INPUT_GOOD);
-	else
-		set_board_power_status(POWER_OFF);
+		if (v)
+			set_board_power_status(POWER_INPUT_GOOD);
+		else
+			set_board_power_status(POWER_OFF);
+	}
 }
 DECLARE_HOOK(HOOK_INIT, power_signal_changed, HOOK_PRIO_DEFAULT);
