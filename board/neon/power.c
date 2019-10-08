@@ -74,6 +74,7 @@ enum power_state power_chipset_init(void)
 }
 
 static int forcing_shutdown;
+static int wdt_enabled;
 
 void chipset_force_shutdown(void)
 {
@@ -104,6 +105,7 @@ enum power_state power_handle_state(enum power_state state)
 {
 	switch (state) {
 	case POWER_G3:
+		wdt_enabled = 0;
 		break;
 
 	case POWER_G3S5:
@@ -118,7 +120,7 @@ enum power_state power_handle_state(enum power_state state)
 			return POWER_S5G3;
 		else
 			return POWER_S5S3;
-	
+
 	case POWER_S5S3:
 		ap_set_reset(1);
 		gpio_set_level(GPIO_PWR_1V0_EN_L, 0);
@@ -153,8 +155,8 @@ enum power_state power_handle_state(enum power_state state)
 		usleep(5);
 
 		gpio_set_level(GPIO_PWR_MGTVTT_EN, 1);
-
 		gpio_set_level(GPIO_PWR_MGTVCC_EN, 1);
+		wdt_enabled = 1;
 
 		usleep(5);
 
@@ -204,6 +206,7 @@ enum power_state power_handle_state(enum power_state state)
 		gpio_set_level(GPIO_PWR_3V8_EN, 0);
 		msleep(5);
 
+		wdt_enabled = 0;
 		gpio_set_level(GPIO_PWR_MGTVCC_EN, 0);
 		gpio_set_level(GPIO_PWR_MGTVTT_EN, 0);
 		msleep(5);
@@ -270,8 +273,12 @@ DECLARE_DEFERRED(force_reset);
 
 void wdt_reset_event(enum gpio_signal signal)
 {
-	CPRINTS("Watchdog timeout, warm reset the AP");
-	wdt_reset = 1;
-	host_set_single_event(EC_HOST_EVENT_HANG_REBOOT);
-	hook_call_deferred(&force_reset_data, 10 * MSEC);
+	if (wdt_enabled) {
+		CPRINTS("Watchdog timeout, warm reset the AP");
+		wdt_reset = 1;
+		host_set_single_event(EC_HOST_EVENT_HANG_REBOOT);
+		hook_call_deferred(&force_reset_data, 10 * MSEC);
+	} else {
+		CPRINTS("Watchdog timeout, ignored");
+	}
 }
