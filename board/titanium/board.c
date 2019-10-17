@@ -165,6 +165,16 @@ const unsigned int i2c_ports_used = ARRAY_SIZE(i2c_ports);
 #include "temp_sensor.h"
 #include "driver/temp_sensor/ec_adc.h"
 #include "driver/temp_sensor/tmp468.h"
+#include "driver/temp_sensor/tmp112.h"
+
+const struct tmp112_t tmp112_sensors[] = {
+	{ I2C_PORT_DB0, TMP112_I2C_ADDR(0) },
+	{ I2C_PORT_DB0, TMP112_I2C_ADDR(1) },
+	{ I2C_PORT_DB1, TMP112_I2C_ADDR(0) },
+	{ I2C_PORT_DB1, TMP112_I2C_ADDR(1) },
+};
+BUILD_ASSERT(ARRAY_SIZE(tmp112_sensors) == TMP112_COUNT);
+
 const struct temp_sensor_t temp_sensors[] = {
 	{"PMBUS-0", TEMP_SENSOR_TYPE_BOARD, pmbus_temp_get_val, PMBUS_ID0},
 	{"PMBUS-1", TEMP_SENSOR_TYPE_BOARD, pmbus_temp_get_val, PMBUS_ID1},
@@ -174,6 +184,10 @@ const struct temp_sensor_t temp_sensors[] = {
 	{"RFSoC", TEMP_SENSOR_TYPE_CPU, tmp468_get_val, TMP468_REMOTE2},
 	{"TMP464 Remote3", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_REMOTE3},
 	{"TMP464 Remote4", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_REMOTE4},
+	{"TMP112 DB0 Top", TEMP_SENSOR_TYPE_BOARD, tmp112_get_val, 0},
+	{"TMP112 DB0 Bottom", TEMP_SENSOR_TYPE_BOARD, tmp112_get_val, 1},
+	{"TMP112 DB1 Top", TEMP_SENSOR_TYPE_BOARD, tmp112_get_val, 2},
+	{"TMP112 DB1 Bottom", TEMP_SENSOR_TYPE_BOARD, tmp112_get_val, 3},
 };
 BUILD_ASSERT(ARRAY_SIZE(temp_sensors) == TEMP_SENSOR_COUNT);
 #endif
