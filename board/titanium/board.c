@@ -107,11 +107,7 @@ BUILD_ASSERT(ARRAY_SIZE(pwm_channels) == PWM_CH_COUNT);
 static void board_init(void)
 {
 	/* No power control yet */
-	/* Go to S3 state */
-	hook_notify(HOOK_CHIPSET_STARTUP);
 
-	/* Go to S0 state */
-	hook_notify(HOOK_CHIPSET_RESUME);
 }
 DECLARE_HOOK(HOOK_INIT, board_init, HOOK_PRIO_DEFAULT);
 

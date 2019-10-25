@@ -278,6 +278,12 @@ static void power_button_changed(void)
 
 		set_board_power_status(POWER_GOOD);
 
+		/* Go to S3 state */
+		hook_notify(HOOK_CHIPSET_STARTUP);
+
+		/* Go to S0 state */
+		hook_notify(HOOK_CHIPSET_RESUME);
+
 		/* Delayed power down from S0/S3, cancel on PB release */
 		hook_call_deferred(&force_shutdown_data,
 				   FORCED_SHUTDOWN_DELAY);
