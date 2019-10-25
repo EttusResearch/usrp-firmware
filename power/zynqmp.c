@@ -174,6 +174,14 @@ void chipset_force_shutdown(enum chipset_shutdown_reason reason)
 	 */
 	forcing_shutdown = 1;
 	task_wake(TASK_ID_CHIPSET);
+
+	ccprintf("Forcing Board Shutdown...\n");
+	/* Call hooks before we drop power rails */
+	hook_notify(HOOK_CHIPSET_SHUTDOWN);
+	power_seq_run(&s0g3_seq[0], ARRAY_SIZE(s0g3_seq));
+	ioex_set_level(IOEX_PWRDB_12V_EN_L, 1);
+	power_signal_changed();
+	ccprintf("Force Shutdown complete!\n");
 }
 
 void chipset_reset(enum chipset_reset_reason reason)
@@ -204,17 +212,8 @@ enum power_state power_chipset_init(void)
 
 static void force_shutdown(void)
 {
-	forcing_shutdown = 1;
-	task_wake(TASK_ID_CHIPSET);
-	if (power_button_is_pressed()) {
-		ccprintf("Forcing Board Shutdown...\n");
-		/* Call hooks before we drop power rails */
-		hook_notify(HOOK_CHIPSET_SHUTDOWN);
-		power_seq_run(&s0g3_seq[0], ARRAY_SIZE(s0g3_seq));
-		ioex_set_level(IOEX_PWRDB_12V_EN_L, 1);
-		power_signal_changed();
-		ccprintf("Force Shutdown complete!\n");
-	}
+	if (power_button_is_pressed())
+		chipset_force_shutdown(CHIPSET_SHUTDOWN_BUTTON);
 }
 DECLARE_DEFERRED(force_shutdown);
 
