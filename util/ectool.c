@@ -1716,7 +1716,7 @@ static int sysinfo(struct ec_response_sysinfo *info)
 
 int cmd_sysinfo(int argc, char **argv)
 {
-	struct ec_response_sysinfo r;
+	struct ec_response_sysinfo r = {};
 	enum sysinfo_fields fields = 0;
 	bool print_prefix = false;
 
@@ -8389,7 +8389,7 @@ static int cmd_mkbp_get(int argc, char *argv[])
 	union ec_response_get_next_data r;
 	int rv;
 	int i;
-	uint32_t supported;
+	uint32_t supported = 0;
 
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s <buttons|switches>\n", argv[0]);

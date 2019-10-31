@@ -1538,7 +1538,7 @@ enum ec_status host_command_reboot(struct host_cmd_handler_args *args)
 	}
 
 #ifdef HAS_TASK_HOSTCMD
-	if ((p.cmd == EC_REBOOT_JUMP_RO && system_get_image_copy() != SYSTEM_IMAGE_RO) ||
+	if ((p.cmd == EC_REBOOT_JUMP_RO && system_get_image_copy() != EC_IMAGE_RO) ||
 	    (p.cmd == EC_REBOOT_JUMP_RW && system_get_image_copy() != system_get_active_copy()) ||
 	    p.cmd == EC_REBOOT_COLD ||
 	    p.cmd == EC_REBOOT_HIBERNATE) {
