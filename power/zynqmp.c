@@ -27,6 +27,8 @@
 /* Long power key press to force shutdown in S0 */
 #define FORCED_SHUTDOWN_DELAY  (8 * SECOND)
 
+#define IN_ALL_S0 (POWER_SIGNAL_MASK(MASTER_PG_MCU) | POWER_SIGNAL_MASK(PS_PWR_GOOD))
+
 /* Console output macros */
 #define CPUTS(outstr) cputs(CC_CHIPSET, outstr)
 #define CPRINTS(format, args...) cprints(CC_CHIPSET, format, ## args)
@@ -48,7 +50,7 @@ struct power_seq_op {
 BUILD_ASSERT(GPIO_COUNT < 256);
 BUILD_ASSERT(ADC_CH_COUNT < 256);
 
-static const struct power_seq_op g3s0_seq[] = {
+static const struct power_seq_op s3s0_seq[] = {
 	{ GPIO_PS_POR_L,          0, 65, ADC_CH_COUNT,         0 },
 	{ GPIO_CORE_PMB_CNTL,     1,  5, VMON_0V85,            850 * 0.9 },
 	{ GPIO_1V8_EN,            1,  5, VMON_1V8,             1800 * 0.9 },
@@ -72,8 +74,8 @@ static const struct power_seq_op g3s0_seq[] = {
 	{ GPIO_PS_SRST_L,         1,  0, ADC_CH_COUNT,         0 },
 };
 
-/* TODO: Use non-zero delays here like g3s0_seq? */
-static const struct power_seq_op s0g3_seq[] = {
+/* TODO: Use non-zero delays here like s3s0_seq? */
+static const struct power_seq_op s0s3_seq[] = {
 	{ GPIO_CLK_DIO_DB_PWR_EN, 0,  0, ADC_CH_COUNT, 0 },
 	{ GPIO_DACVTT_EN,         0,  0, ADC_CH_COUNT, 0 },
 	{ GPIO_DAC_VCCAUX_EN,     0,  0, ADC_CH_COUNT, 0 },
@@ -156,12 +158,113 @@ static int power_seq_run(const struct power_seq_op *op, int op_count)
 	return 0;
 }
 
-enum power_state power_handle_state(enum power_state state)
+static void configure_bootmode(uint8_t mode)
 {
-	return POWER_G3;
+	gpio_set_level(GPIO_PS_MODE_0, !!(mode & 0x1));
+	gpio_set_level(GPIO_PS_MODE_1, !!(mode & 0x2));
+	gpio_set_level(GPIO_PS_MODE_2, !!(mode & 0x4));
+	gpio_set_level(GPIO_PS_MODE_3, !!(mode & 0x8));
 }
 
 static int forcing_shutdown;
+static int power_error;
+
+enum power_state power_handle_state(enum power_state state)
+{
+	int v, timeout;
+
+	switch (state) {
+	case POWER_G3:
+		break;
+	case POWER_S5:
+		if (forcing_shutdown || power_error)
+			return POWER_S5G3;
+		return POWER_S5S3;
+	case POWER_S3:
+		if (forcing_shutdown || power_error)
+			return POWER_S3S5;
+		return POWER_S3S0;
+	case POWER_S0:
+		if (forcing_shutdown)
+			return POWER_S0S3;
+		if ((power_get_signals() & IN_ALL_S0) != IN_ALL_S0) {
+			power_error = 1;
+			return POWER_S0S3;
+		}
+		return state;
+	case POWER_G3S5:
+		forcing_shutdown = 0;
+		power_error = 0;
+		return POWER_S5;
+	case POWER_S5S3:
+		if (ioex_set_level(IOEX_PWRDB_12V_EN_L, 0)) {
+			ccprintf("failed to enable 12v rail\n");
+			set_board_power_status(POWER_INPUT_BAD);
+			return POWER_S3S5;
+		}
+
+		/* LTC4234 max turn-on delay is 72ms, give it far longer */
+		timeout = 200;
+		do {
+			if (ioex_get_level(IOEX_PWRDB_VIN_PG, &v) == 0 && v)
+				break;
+			msleep(1);
+		} while (timeout--);
+
+		if (ioex_get_level(IOEX_PWRDB_VIN_PG, &v) || !v) {
+			ccprintf("vin power good is low\n");
+			set_board_power_status(POWER_INPUT_BAD);
+			return POWER_S3S5;
+		}
+
+		/* wait to ensure PMBUS devices are up */
+		msleep(5);
+
+		/* Set core supply to 850 mV */
+		if (pmbus_set_volt_out(PMBUS_ID0, 850)) {
+			ccprintf("failed to set pmbus output voltage\n");
+			set_board_power_status(POWER_INPUT_BAD);
+			return POWER_S3S5;
+		}
+
+		hook_notify(HOOK_CHIPSET_STARTUP);
+		return POWER_S3;
+	case POWER_S3S0:
+		configure_bootmode(bootmode);
+
+		if (power_seq_run(&s3s0_seq[0], ARRAY_SIZE(s3s0_seq))) {
+			ccprintf("failed to run power seq\n");
+			power_error = 1;
+			return POWER_S0S3;
+		}
+
+		if (power_wait_signals_timeout(IN_ALL_S0, 100 * MSEC)
+						== EC_ERROR_TIMEOUT)  {
+			ccprintf("master pg not good\n");
+			power_error = 1;
+			return POWER_S0S3;
+		}
+
+		set_board_power_status(POWER_GOOD);
+		hook_notify(HOOK_CHIPSET_RESUME);
+		disable_sleep(SLEEP_MASK_AP_RUN);
+		return POWER_S0;
+	case POWER_S0S3:
+		hook_notify(HOOK_CHIPSET_SUSPEND);
+		power_seq_run(&s0s3_seq[0], ARRAY_SIZE(s0s3_seq));
+		set_board_power_status(power_error ? POWER_BAD : POWER_INPUT_GOOD);
+		enable_sleep(SLEEP_MASK_AP_RUN);
+		return POWER_S3;
+	case POWER_S3S5:
+		hook_notify(HOOK_CHIPSET_SHUTDOWN);
+		return POWER_S5;
+	case POWER_S5G3:
+		ioex_set_level(IOEX_PWRDB_12V_EN_L, 1);
+		return POWER_G3;
+	}
+
+	return state;
+}
 
 void chipset_force_shutdown(enum chipset_shutdown_reason reason)
 {
@@ -174,14 +277,6 @@ void chipset_force_shutdown(enum chipset_shutdown_reason reason)
 	 */
 	forcing_shutdown = 1;
 	task_wake(TASK_ID_CHIPSET);
-
-	ccprintf("Forcing Board Shutdown...\n");
-	/* Call hooks before we drop power rails */
-	hook_notify(HOOK_CHIPSET_SHUTDOWN);
-	power_seq_run(&s0g3_seq[0], ARRAY_SIZE(s0g3_seq));
-	ioex_set_level(IOEX_PWRDB_12V_EN_L, 1);
-	power_signal_changed();
-	ccprintf("Force Shutdown complete!\n");
 }
 
 void chipset_reset(enum chipset_reset_reason reason)
@@ -197,14 +292,12 @@ void chipset_reset(enum chipset_reset_reason reason)
 enum power_state power_chipset_init(void)
 {
 	if (system_jumped_to_this_image()) {
-		if ((power_get_signals() /*& IN_ALL_S0*/)/* == IN_ALL_S0*/) {
+		if ((power_get_signals() & IN_ALL_S0) == IN_ALL_S0) {
 			disable_sleep(SLEEP_MASK_AP_RUN);
 			CPRINTS("already in S0");
 			return POWER_S0;
 		}
-	} else if (!(system_get_reset_flags() & EC_RESET_FLAG_AP_OFF))
-		/* Auto-power on */
-		chipset_exit_hard_off();
+	}
 
 	return POWER_G3;
 }
@@ -217,71 +310,11 @@ static void force_shutdown(void)
 }
 DECLARE_DEFERRED(force_shutdown);
 
-static void configure_bootmode(uint8_t mode)
-{
-	gpio_set_level(GPIO_PS_MODE_0, !!(mode & 0x1));
-	gpio_set_level(GPIO_PS_MODE_1, !!(mode & 0x2));
-	gpio_set_level(GPIO_PS_MODE_2, !!(mode & 0x4));
-	gpio_set_level(GPIO_PS_MODE_3, !!(mode & 0x8));
-}
-
 static void power_button_changed(void)
 {
-	int v;
-
 	if (power_button_is_pressed()) {
 		if (chipset_in_state(CHIPSET_STATE_ANY_OFF))
 			chipset_exit_hard_off();
-
-		/*
-		 * TODO: handle case where linux is manually shutdown so
-		 * POWER is GOOD and pressing power button should start linux
-		 * instead of doing nothing. For that to work we need some
-		 * signal from the AP to convey that it is in "power off" state
-		 * or/and maintain power state using power state management.
-		 * Having this code also prevents power sequence re-run
-		 * when the system is up and power button is pressed. Such signal
-		 * would also be necessary to trigger a safe power rail bring-down
-		 * after linux shuts down.
-		 */
-		if (get_board_power_status() == POWER_GOOD) {
-			hook_call_deferred(&force_shutdown_data,
-					FORCED_SHUTDOWN_DELAY);
-			return;
-		}
-
-		configure_bootmode(bootmode);
-
-		if (ioex_set_level(IOEX_PWRDB_12V_EN_L, 0))
-			goto err1;
-
-		/* Turn-On Delay for LTC4234 is 72 ms. Use twice of that (150ms).
-		PMBUS device delay is 200 ms. Total 350 ms. */
-		msleep(350);
-
-		/* Set core supply to 850 mV */
-		pmbus_set_volt_out(PMBUS_ID0, 850/* mV */);
-
-		if (ioex_get_level(IOEX_PWRDB_VIN_PG, &v))
-			goto err1;
-		if (!v)
-			goto err1;
-
-		power_seq_run(&g3s0_seq[0], ARRAY_SIZE(g3s0_seq));
-
-		/* TODO: Need to wait here at all? How long? */
-		msleep(10);
-
-		if (!gpio_get_level(GPIO_MASTER_PG_MCU))
-			goto err2;
-
-		set_board_power_status(POWER_GOOD);
-
-		/* Go to S3 state */
-		hook_notify(HOOK_CHIPSET_STARTUP);
-
-		/* Go to S0 state */
-		hook_notify(HOOK_CHIPSET_RESUME);
 
 		/* Delayed power down from S0/S3, cancel on PB release */
 		hook_call_deferred(&force_shutdown_data,
@@ -290,20 +323,6 @@ static void power_button_changed(void)
 		/* Power button released, cancel deferred shutdown */
 		hook_call_deferred(&force_shutdown_data, -1);
 	}
-	return;
-err1:
-	/* Disable 12V power supply */
-	ioex_set_level(IOEX_PWRDB_12V_EN_L, 1);
-	ccprintf("Failed to turn on 12V power supply\n");
-	set_board_power_status(POWER_INPUT_BAD);
-	return;
-err2:
-	power_seq_run(&s0g3_seq[0], ARRAY_SIZE(s0g3_seq));
-	/* Disable 12V power supply */
-	ioex_set_level(IOEX_PWRDB_12V_EN_L, 1);
-	ccprintf("Voltage regulators report incorrect power good signals\n");
-	set_board_power_status(POWER_BAD);
-	return;
 }
 DECLARE_HOOK(HOOK_POWER_BUTTON_CHANGE, power_button_changed, HOOK_PRIO_DEFAULT);
 
