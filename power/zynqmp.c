@@ -287,6 +287,8 @@ void chipset_reset(enum chipset_reset_reason reason)
 #endif
 	CPRINTS("%s(%d)", __func__, reason);
 	report_ap_reset(reason);
+
+	power_seq_run(&s0por_seq[0], ARRAY_SIZE(s0por_seq));
 }
 
 enum power_state power_chipset_init(void)
