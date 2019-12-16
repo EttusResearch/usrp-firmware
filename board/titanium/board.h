@@ -131,6 +131,18 @@ enum ioex_ports {
 };
 #endif
 
+#define CONFIG_HOST_CONTROL_GPIO
+#ifdef CONFIG_HOST_CONTROL_GPIO
+enum host_control_gpios {
+	USER_LED_G,
+	USER_LED_R,
+	PCIE_LED_G,
+	PCIE_LED_R,
+
+	HOST_CONTROL_GPIO_COUNT,
+};
+#endif
+
 #ifdef CONFIG_ADC
 enum adc_channel {
 	ADC1_18 = 0,

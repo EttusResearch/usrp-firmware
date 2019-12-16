@@ -24,6 +24,7 @@
 #include "power_button.h"
 #include "pmbus.h"
 #include "gpio_list.h"
+#include "host_control_gpio.h"
 
 static int led_state;
 static void board_second(void)
@@ -44,6 +45,16 @@ const struct power_signal_info power_signal_list[] = {
 	{GPIO_BUT_RESET_L, POWER_SIGNAL_ACTIVE_LOW, "BUT_RESET#_ASSERTED"},
 };
 BUILD_ASSERT(ARRAY_SIZE(power_signal_list) == POWER_SIGNAL_COUNT);
+
+#ifdef CONFIG_HOST_CONTROL_GPIO
+const struct host_control_gpio host_control_gpios[] = {
+	[USER_LED_G] = { .name = "USER_LED_G_L", .signal = IOEX_PWRDB_LED2G_L },
+	[USER_LED_R] = { .name = "USER_LED_R_L", .signal = IOEX_PWRDB_LED2R_L },
+	[PCIE_LED_G] = { .name = "PCIE_LED_G_L", .signal = IOEX_PWRDB_LED0G_L },
+	[PCIE_LED_R] = { .name = "PCIE_LED_R_L", .signal = IOEX_PWRDB_LED0R_L },
+};
+BUILD_ASSERT(ARRAY_SIZE(host_control_gpios) == HOST_CONTROL_GPIO_COUNT);
+#endif
 
 #ifdef CONFIG_I2C_MUX
 #define TCA954X_I2C_ADDR 0x70
