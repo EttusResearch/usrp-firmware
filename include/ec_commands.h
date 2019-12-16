@@ -6446,6 +6446,36 @@ struct ec_params_charger_control {
 	uint8_t allow_charging;
 } __ec_align_size1;
 
+#define EC_CMD_HOST_GPIO_QUERY 0x2A02
+struct ec_params_host_gpio_query {
+	uint8_t subcmd;
+	uint8_t index;
+} __ec_align_size1;
+
+struct ec_response_host_gpio_query {
+	union {
+		struct __ec_align1 {
+			char name[32];
+			uint32_t flags;
+		} get_info;
+		struct __ec_align1 {
+			uint8_t val;
+		} get_state, get_count;
+	};
+};
+
+enum host_gpio_query_subcmd {
+	EC_HOST_GPIO_GET_COUNT = 0,
+	EC_HOST_GPIO_GET_INFO = 1,
+	EC_HOST_GPIO_GET_STATE = 2,
+};
+
+#define EC_CMD_HOST_GPIO_SET 0x2A03
+struct ec_params_host_gpio_set {
+	uint8_t index;
+	uint8_t val;
+} __ec_align_size1;
+
 /*****************************************************************************/
 /*
  * Reserve a range of host commands for board-specific, experimental, or
