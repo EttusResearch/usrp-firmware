@@ -56,13 +56,22 @@ static inline void adc_set_channel(int sample_id, int channel)
 static void adc_configure(int ain_id)
 {
 	/* Set ADC channel */
-	adc_set_channel(0, ain_id);
+	adc_set_channel(0, ain_id & 0x1F);
 
 	/* Disable DMA */
 	STM32_ADC_CR2 &= ~BIT(8);
 
 	/* Disable scan mode */
 	STM32_ADC_CR1 &= ~BIT(8);
+
+	if (ain_id == STM32_ADC_CHANNEL_TEMPERATURE ||
+	    ain_id == STM32_AIN(17)) {
+		STM32_ADC_CCR |= STM32_ADC_CCR_TSVREFE;
+		udelay(100);
+	} else if (ain_id == STM32_ADC_CHANNEL_VBATT) {
+		STM32_ADC_CCR |= STM32_ADC_CCR_VBATE;
+		udelay(100);
+	}
 }
 
 static void __attribute__((unused)) adc_configure_all(void)
@@ -212,6 +221,9 @@ int adc_read_channel(enum adc_channel ch)
 		}
 	} while (!timestamp_expired(deadline, NULL));
 
+	/* Clear VBATE and TSREFV */
+	STM32_ADC_CCR &= ~(STM32_ADC_CCR_VBATE | STM32_ADC_CCR_TSVREFE);
+
 	if (restore_watchdog)
 		adc_enable_watchdog_no_lock();
 
@@ -241,10 +253,6 @@ static void adc_init(void)
 	 * So the ADC clock is 8MHz.
 	 */
 	clock_enable_module(MODULE_ADC, 1);
-
-#ifdef CONFIG_STM32_INTERNAL_TEMP
-	STM32_ADC_CCR |= (1 << 23);
-#endif
 
 	/*
 	 * ADC clock is divided with respect to AHB, so no delay needed

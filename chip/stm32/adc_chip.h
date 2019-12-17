@@ -50,6 +50,14 @@ void adc_disable(void);
 #define ADC_READ_MAX 4095
 
 /* Just plain id mapping for code readability */
-#define STM32_AIN(x) (x)
+#define STM32_AIN(x) (x & 0x1F)
+
+/*
+ * The temperature sensor and Vbatt are both connected to ADC channel
+ * 18, and another register must be configured to select which will be
+ * sampled.
+ */
+#define STM32_ADC_CHANNEL_TEMPERATURE	(STM32_AIN(18) | BIT(23))
+#define STM32_ADC_CHANNEL_VBATT		(STM32_AIN(18) | BIT(22))
 
 #endif /* __CROS_EC_ADC_CHIP_H */

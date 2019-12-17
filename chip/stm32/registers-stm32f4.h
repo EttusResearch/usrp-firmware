@@ -850,6 +850,8 @@ typedef volatile struct stm32_spi_regs stm32_spi_regs_t;
 #define STM32_ADC_JDR(n)           REG32(STM32_ADC1_BASE + 0x3C + ((n)&3) * 4)
 #define STM32_ADC_DR               REG32(STM32_ADC1_BASE + 0x4C)
 #define STM32_ADC_CCR              REG32(STM32_ADC1_BASE + 0x304)
+#define STM32_ADC_CCR_TSVREFE      BIT(23)
+#define STM32_ADC_CCR_VBATE        BIT(22)
 
 /* --- Comparators --- */
 
