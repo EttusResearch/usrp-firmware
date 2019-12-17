@@ -27,7 +27,7 @@ struct rail_monitor {
 };
 
 static const struct rail_monitor rail_monitors[] = {
-	{ADC1_18, -1},
+	{VMON_VBATT, -1},
 	{ADC1_17, -1},
 	{VMON_0V9, INA2XX_0V9},
 	{VMON_0V85, -1},

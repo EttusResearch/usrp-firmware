@@ -131,7 +131,8 @@ int extpower_is_present(void)
 #ifdef CONFIG_ADC
 /* ADC channels */
 const struct adc_t adc_channels[] = {
-	[ADC1_18]		= {"VSense", 1, 1, 0, STM32_AIN(18)},
+	[VMON_VBATT]		= {"VMON: Vbatt", 4 * 3300, 4096, 0, STM32_ADC_CHANNEL_VBATT},
+	[ADC1_TEMPERATURE]	= {"Vtemp", 1, 1, 0, STM32_ADC_CHANNEL_TEMPERATURE},
 	[ADC1_17]		= {"VRef", 3300, 4096, 0, STM32_AIN(17)},
 	[VMON_0V9]		= {"VMON: 0.9V", 3300, 4096, 0, STM32_AIN(0)},
 	[VMON_0V85]		= {"VMON: 0.85V", 3300,	4096, 0, STM32_AIN(1)},
@@ -185,7 +186,7 @@ BUILD_ASSERT(ARRAY_SIZE(tmp112_sensors) == TMP112_COUNT);
 const struct temp_sensor_t temp_sensors[] = {
 	{"PMBUS-0", TEMP_SENSOR_TYPE_BOARD, pmbus_temp_get_val, PMBUS_ID0},
 	{"PMBUS-1", TEMP_SENSOR_TYPE_BOARD, pmbus_temp_get_val, PMBUS_ID1},
-	{"EC Internal", TEMP_SENSOR_TYPE_BOARD, ec_adc_get_val, ADC1_18},
+	{"EC Internal", TEMP_SENSOR_TYPE_BOARD, ec_adc_get_val, ADC1_TEMPERATURE},
 	{"TMP464 Internal", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_LOCAL},
 	{"TMP464 Remote1", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_REMOTE1},
 	{"RFSoC", TEMP_SENSOR_TYPE_CPU, tmp468_get_val, TMP468_REMOTE2},

@@ -145,7 +145,8 @@ enum host_control_gpios {
 
 #ifdef CONFIG_ADC
 enum adc_channel {
-	ADC1_18 = 0,
+	VMON_VBATT = 0,
+	ADC1_TEMPERATURE,
 	ADC1_17,
 	VMON_0V9,
 	VMON_0V85,
