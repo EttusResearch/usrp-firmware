@@ -72,10 +72,10 @@ GPIO(3V3_CLK_EN,           PIN(C, 12), GPIO_OUT_LOW)
 //GPIO(PS_DONE,              PIN(C, 13), GPIO_INPUT)//
 /* PC14 and PC15 are OSC in/out */
 
-GPIO(PS_MODE_0,            PIN(D, 0),  GPIO_OUTPUT)
+GPIO(PS_MODE_3,            PIN(D, 0),  GPIO_OUTPUT)
 GPIO(PS_MODE_1,            PIN(D, 1),  GPIO_OUTPUT)
 GPIO(PS_MODE_2,            PIN(D, 2),  GPIO_OUTPUT)
-UNIMPLEMENTED(PS_MODE_3)
+UNIMPLEMENTED(PS_MODE_0)
 
 GPIO(MCU_LED_L,            PIN(D, 3),  GPIO_OUTPUT)
 /* Should these be IRQs? */
