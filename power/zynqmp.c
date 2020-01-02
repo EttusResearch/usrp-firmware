@@ -54,7 +54,18 @@ static const struct pwrsup_seq s3s0_ps_seq[] = {
 	{ POWER_SUPPLY_DACVCC,		5 },
 	{ POWER_SUPPLY_DACVCCAUX,	5 },
 	{ POWER_SUPPLY_DACVTT,		5 },
-	{ POWER_SUPPLY_CLK_DIO,		5 },
+};
+
+static const struct pwrsup_seq dioaux_seq[] = {
+	{ POWER_SUPPLY_DIO_12V,		0 },
+	{ POWER_SUPPLY_DIO_3V3,		0 },
+	{ POWER_SUPPLY_DIO_1V2,		0 },
+};
+
+static const struct pwrsup_seq clkaux_seq[] = {
+	{ POWER_SUPPLY_CLKDB_12V,	0 },
+	{ POWER_SUPPLY_CLKDB_3V7,	0 },
+	{ POWER_SUPPLY_CLKDB_3V3,	0 },
 };
 
 static void zynqmp_s0_por(void)
@@ -146,12 +157,22 @@ enum power_state power_handle_state(enum power_state state)
 		gpio_set_level(GPIO_PS_POR_L, 1);
 		gpio_set_level(GPIO_PS_SRST_L, 1);
 
+		if (pwrsup_seq_power_on(clkaux_seq, ARRAY_SIZE(clkaux_seq)))
+			ccprintf("failed to sequence clkaux\n");
+
+		if (pwrsup_seq_power_on(dioaux_seq, ARRAY_SIZE(dioaux_seq)))
+			ccprintf("failed to sequence dioaux\n");
+
 		set_board_power_status(POWER_GOOD);
 		hook_notify(HOOK_CHIPSET_RESUME);
 		disable_sleep(SLEEP_MASK_AP_RUN);
 		return POWER_S0;
 	case POWER_S0S3:
 		hook_notify(HOOK_CHIPSET_SUSPEND);
+
+		pwrsup_seq_power_off(dioaux_seq, ARRAY_SIZE(dioaux_seq));
+		pwrsup_seq_power_off(clkaux_seq, ARRAY_SIZE(clkaux_seq));
+
 		pwrsup_seq_power_off(s3s0_ps_seq, ARRAY_SIZE(s3s0_ps_seq));
 		set_board_power_status(power_error ? POWER_BAD : POWER_INPUT_GOOD);
 		enable_sleep(SLEEP_MASK_AP_RUN);
