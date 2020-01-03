@@ -96,15 +96,21 @@ static const struct power_seq_op s0s3_seq[] = {
 	{ GPIO_CORE_PMB_CNTL,     0,  0, ADC_CH_COUNT, 0 },
 };
 
-static const struct power_seq_op s0por_seq[] = {
-	{ GPIO_PS_POR_L, 0, 65, ADC_CH_COUNT, 0 },
-	{ GPIO_PS_POR_L, 1,  0, ADC_CH_COUNT, 0 },
-};
+static void zynqmp_s0_por(void)
+{
+	ccprintf("ZynqMP: Resetting (POR) ... \n");
+	gpio_set_level(GPIO_PS_POR_L, 0);
+	msleep(65);
+	gpio_set_level(GPIO_PS_POR_L, 1);
+}
 
-static const struct power_seq_op s0srst_seq[] = {
-	{ GPIO_PS_SRST_L, 0, 5, ADC_CH_COUNT, 0 },
-	{ GPIO_PS_SRST_L, 1, 0, ADC_CH_COUNT, 0 },
-};
+static void zynqmp_s0_srst(void)
+{
+	ccprintf("ZynqMP: Resetting (SRST) ... \n");
+	gpio_set_level(GPIO_PS_SRST_L, 0);
+	msleep(5);
+	gpio_set_level(GPIO_PS_SRST_L, 1);
+}
 
 static int power_seq_adc_wait(enum adc_channel chan, int min_mv)
 {
@@ -288,7 +294,7 @@ void chipset_reset(enum chipset_reset_reason reason)
 	CPRINTS("%s(%d)", __func__, reason);
 	report_ap_reset(reason);
 
-	power_seq_run(&s0por_seq[0], ARRAY_SIZE(s0por_seq));
+	zynqmp_s0_por();
 }
 
 enum power_state power_chipset_init(void)
@@ -381,11 +387,9 @@ static int command_zynqmp(int argc, char **argv)
 			 gpio_get_level(GPIO_PS_PROG_L), gpio_get_level(GPIO_PS_ERR_OUT),
 			 gpio_get_level(GPIO_PS_ERR_STAT));
 	} else if (!strcasecmp(argv[1], "por")) {
-		ccprintf("ZynqMP: Resetting (POR) ... \n");
-		power_seq_run(&s0por_seq[0], ARRAY_SIZE(s0por_seq));
+		zynqmp_s0_por();
 	} else if (!strcasecmp(argv[1], "srst")) {
-		ccprintf("ZynqMP: Resetting (SRST) ... \n");
-		power_seq_run(&s0srst_seq[0], ARRAY_SIZE(s0srst_seq));
+		zynqmp_s0_srst();
 	} else if (!strcasecmp(argv[1], "bootmode")) {
 		if (argc > 2) {
 			if (str_to_bootmode(argv[2]) < 0) {
