@@ -1979,6 +1979,9 @@
 /* Config option to allow host control of whitelisted GPIOs */
 #undef CONFIG_HOST_CONTROL_GPIO
 
+/* Config option to enable support for controlling power supplies */
+#undef CONFIG_PWRSUP
+
 /* clear bit(s) to mask reporting of an EC_HOST_EVENT_XXX event(s) */
 #define CONFIG_HOST_EVENT_REPORT_MASK 0xffffffff
 #define CONFIG_HOST_EVENT64_REPORT_MASK 0xffffffffffffffffULL
