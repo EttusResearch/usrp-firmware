@@ -59,7 +59,7 @@ BUILD_ASSERT(ARRAY_SIZE(host_control_gpios) == HOST_CONTROL_GPIO_COUNT);
 #endif
 
 const struct pwrsup_info power_supply_list[] = {
-	PWRSUP_INFO(12V,        12V,        IOEX_PWRDB_12V_EN_L, PWRSUP_MON_SIG(IOEX_PWRDB_VIN_PG), .flag_enable_inverted = 1),
+	PWRSUP_INFO(12V,        12V,        IOEX_PWRDB_12V_EN,   PWRSUP_MON_SIG(IOEX_PWRDB_VIN_PG)),
 	PWRSUP_INFO(0V85,       12V,        GPIO_CORE_PMB_CNTL,  PWRSUP_MON_ADC(VMON_0V85, 850 * 0.9)),
 	PWRSUP_INFO(1V8,        12V,        GPIO_1V8_EN,         PWRSUP_MON_ADC(VMON_1V8, 1800 * 0.9)),
 	PWRSUP_INFO(2V5,        12V,        GPIO_2V5_EN,         PWRSUP_MON_ADC(VMON_2V5, 2500 * 0.9)),
