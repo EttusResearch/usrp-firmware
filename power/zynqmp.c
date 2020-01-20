@@ -28,8 +28,6 @@
 /* Long power key press to force shutdown in S0 */
 #define FORCED_SHUTDOWN_DELAY  (8 * SECOND)
 
-#define IN_ALL_S0 (POWER_SIGNAL_MASK(MASTER_PG_MCU) | POWER_SIGNAL_MASK(PS_PWR_GOOD))
-
 /* Console output macros */
 #define CPUTS(outstr) cputs(CC_CHIPSET, outstr)
 #define CPRINTS(format, args...) cprints(CC_CHIPSET, format, ## args)
@@ -102,10 +100,12 @@ enum power_state power_handle_state(enum power_state state)
 	case POWER_S0:
 		if (forcing_shutdown)
 			return POWER_S0S3;
-		if ((power_get_signals() & IN_ALL_S0) != IN_ALL_S0) {
+
+		if (!pwrsup_check_supplies(s3s0_ps_seq, ARRAY_SIZE(s3s0_ps_seq))) {
 			power_error = 1;
 			return POWER_S0S3;
 		}
+
 		return state;
 	case POWER_G3S5:
 		forcing_shutdown = 0;
@@ -145,13 +145,6 @@ enum power_state power_handle_state(enum power_state state)
 
 		gpio_set_level(GPIO_PS_POR_L, 1);
 		gpio_set_level(GPIO_PS_SRST_L, 1);
-
-		if (power_wait_signals_timeout(IN_ALL_S0, 100 * MSEC)
-						== EC_ERROR_TIMEOUT)  {
-			ccprintf("master pg not good\n");
-			power_error = 1;
-			return POWER_S0S3;
-		}
 
 		set_board_power_status(POWER_GOOD);
 		hook_notify(HOOK_CHIPSET_RESUME);
@@ -202,7 +195,7 @@ void chipset_reset(enum chipset_reset_reason reason)
 enum power_state power_chipset_init(void)
 {
 	if (system_jumped_to_this_image()) {
-		if ((power_get_signals() & IN_ALL_S0) == IN_ALL_S0) {
+		if (pwrsup_check_supplies(s3s0_ps_seq, ARRAY_SIZE(s3s0_ps_seq))) {
 			disable_sleep(SLEEP_MASK_AP_RUN);
 			CPRINTS("already in S0");
 			return POWER_S0;

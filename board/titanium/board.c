@@ -9,6 +9,7 @@
 #include "common.h"
 #include "console.h"
 #include "ec_version.h"
+#include "pwrsup.h"
 #include "gpio.h"
 #include "hooks.h"
 #include "i2c.h"
@@ -25,7 +26,6 @@
 #include "pmbus.h"
 #include "gpio_list.h"
 #include "host_control_gpio.h"
-#include "pwrsup.h"
 #include "fan.h"
 
 static int led_state;

@@ -7,7 +7,7 @@
 
 GPIO_INT(POWER_BUTTON_L,   PIN(D, 10), GPIO_INT_BOTH, power_button_interrupt)
 
-GPIO_INT(MASTER_PG_MCU,    PIN(B, 5),  GPIO_INT_BOTH, power_signal_interrupt)
+GPIO_INT(MASTER_PG_MCU,    PIN(B, 5),  GPIO_INT_FALLING, pwrsup_interrupt)
 GPIO_INT(PS_DONE,          PIN(C, 13), GPIO_INT_BOTH, power_signal_interrupt)
 GPIO_INT(PS_INIT_L,        PIN(D, 4),  GPIO_INT_BOTH, power_signal_interrupt)
 GPIO_INT(PS_ERR_OUT,       PIN(D, 6),  GPIO_INT_BOTH, power_signal_interrupt)
