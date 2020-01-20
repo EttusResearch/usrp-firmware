@@ -70,9 +70,9 @@ static void pwm_configure(enum pwm_channel ch)
 
 	/* Output, PWM mode 1, preload enable */
 	if (pwm->channel & 0x1)
-		*ccmr = (6 << 4) | BIT(3);
+		*ccmr |= (6 << 4) | BIT(3);
 	else
-		*ccmr = (6 << 12) | BIT(11);
+		*ccmr |= (6 << 12) | BIT(11);
 
 	/* Output enable. Set active high/low. */
 	if (pwm->flags & PWM_CONFIG_ACTIVE_LOW)
@@ -84,7 +84,7 @@ static void pwm_configure(enum pwm_channel ch)
 	if (pwm->flags & PWM_CONFIG_COMPLEMENTARY_OUTPUT)
 		ccer |= (ccer << 2);
 
-	tim->ccer = ccer;
+	tim->ccer |= ccer;
 
 	/*
 	 * Main output enable.
