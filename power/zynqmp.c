@@ -49,11 +49,14 @@ static const struct pwrsup_seq s3s0_ps_seq[] = {
 	{ POWER_SUPPLY_3V6,		5 },
 	{ POWER_SUPPLY_3V3CLK,		5 },
 	{ POWER_SUPPLY_1V8CLK,		0 },
+	{ POWER_SUPPLY_DACVTT,		5 },
+};
+
+static const struct pwrsup_seq adcdac_seq[] = {
 	{ POWER_SUPPLY_ADCVCC,		10 },
 	{ POWER_SUPPLY_ADCVCCAUX,	5 },
 	{ POWER_SUPPLY_DACVCC,		5 },
 	{ POWER_SUPPLY_DACVCCAUX,	5 },
-	{ POWER_SUPPLY_DACVTT,		5 },
 };
 
 static const struct pwrsup_seq dioaux_seq[] = {
@@ -157,6 +160,9 @@ enum power_state power_handle_state(enum power_state state)
 		gpio_set_level(GPIO_PS_POR_L, 1);
 		gpio_set_level(GPIO_PS_SRST_L, 1);
 
+		if (pwrsup_seq_power_on(adcdac_seq, ARRAY_SIZE(adcdac_seq)))
+			ccprintf("failed to sequence adc/dac supplies\n");
+
 		if (pwrsup_seq_power_on(clkaux_seq, ARRAY_SIZE(clkaux_seq)))
 			ccprintf("failed to sequence clkaux\n");
 
@@ -170,6 +176,7 @@ enum power_state power_handle_state(enum power_state state)
 	case POWER_S0S3:
 		hook_notify(HOOK_CHIPSET_SUSPEND);
 
+		pwrsup_seq_power_off(adcdac_seq, ARRAY_SIZE(adcdac_seq));
 		pwrsup_seq_power_off(dioaux_seq, ARRAY_SIZE(dioaux_seq));
 		pwrsup_seq_power_off(clkaux_seq, ARRAY_SIZE(clkaux_seq));
 
