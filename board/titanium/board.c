@@ -253,6 +253,10 @@ struct ioexpander_config_t ioex_config[] = {
 	{ I2C_PORT_DB0_PWR, TCA6416_I2C_ADDR(0), &tca6416_ioexpander_drv },
 	{ I2C_PORT_DB1_PWR, TCA6416_I2C_ADDR(0), &tca6416_ioexpander_drv },
 	{ I2C_PORT_RTC, TCA6408_I2C_ADDR(1), &tca6408_ioexpander_drv },
+#ifdef TITANIUM_ENABLE_RFCHAR_GPIO
+	{ I2C_PORT_DB0, TCA6416_I2C_ADDR(0), &tca6416_ioexpander_drv },
+	{ I2C_PORT_DB1, TCA6416_I2C_ADDR(0), &tca6416_ioexpander_drv },
+#endif
 };
 BUILD_ASSERT(ARRAY_SIZE(ioex_config) == CONFIG_IO_EXPANDER_PORT_COUNT);
 #endif
