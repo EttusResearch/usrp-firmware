@@ -3,7 +3,6 @@
 #include "eeprom.h"
 #include "endian.h"
 #include "board.h"
-#include "hooks.h"
 #include "util.h"
 #include "i2c.h"
 #include "crc.h"
@@ -17,11 +16,18 @@
 #define debug(...)
 #endif
 
+enum eeprom_state {
+	EEPROM_STATE_UNINIT,
+	EEPROM_STATE_MISSING,
+	EEPROM_STATE_INVALID,
+	EEPROM_STATE_VALID,
+};
+
 struct eeprom_info {
 	const char *name;
 	int port;
 	struct tlv_eeprom contents;
-	int valid;
+	uint8_t state;
 };
 
 static struct eeprom_info eeproms[] = {
@@ -64,25 +70,28 @@ static int tlv_eeprom_read(int port, struct tlv_eeprom *eeprom)
 	return 0;
 }
 
-void eeproms_init(void)
+static void load_eeprom(struct eeprom_info *eeprom)
 {
-	struct eeprom_info *eeprom;
-	size_t i;
-	int ret;
-
-	for (i = 0; i < ARRAY_SIZE(eeproms); i++) {
-		eeprom = eeproms + i;
-
-		ret = tlv_eeprom_read(eeprom->port, &eeprom->contents);
-		if (ret)
-			debug("%s eeprom read failed\n", eeprom->name);
-		eeprom->valid = tlv_eeprom_validate(&eeprom->contents,
-						    USRP_EEPROM_MAGIC) == 0;
-		debug("%s eeprom contents %s\n", eeprom->name,
-		      eeprom->valid ? "valid" : "invalid");
+	if (eeprom->state == EEPROM_STATE_VALID) {
+		ccprintf("cache hit %s\n", eeprom->name);
+		return;
 	}
+
+	if (tlv_eeprom_read(eeprom->port, &eeprom->contents)) {
+		eeprom->state = EEPROM_STATE_MISSING;
+		goto out;
+	}
+
+	if (tlv_eeprom_validate(&eeprom->contents, USRP_EEPROM_MAGIC) == 0)
+		eeprom->state = EEPROM_STATE_VALID;
+	else
+		eeprom->state = EEPROM_STATE_INVALID;
+out:
+	ccprintf("%s eeprom state: %s\n", eeprom->name,
+	      eeprom->state == EEPROM_STATE_VALID ? "valid" :
+	      eeprom->state == EEPROM_STATE_MISSING ? "missing" :
+	      eeprom->state == EEPROM_STATE_INVALID ? "invalid" : "uninit");
 }
-DECLARE_HOOK(HOOK_INIT, eeproms_init, HOOK_PRIO_DEFAULT + 1);
 
 static void eeprom_dump_raw(const struct tlv_eeprom *eeprom)
 {
@@ -108,7 +117,7 @@ static void eeprom_dump(const struct tlv_eeprom *eeprom)
 
 static int command_eepromdump(int argc, char **argv)
 {
-	const struct eeprom_info *eeprom;
+	struct eeprom_info *eeprom;
 	int raw = 0;
 	size_t i;
 
@@ -124,14 +133,24 @@ static int command_eepromdump(int argc, char **argv)
 
 	for (i = 0; i < ARRAY_SIZE(eeproms); i++)  {
 		eeprom = eeproms + i;
+		load_eeprom(eeprom);
 
 		if (!strcasecmp(argv[1], eeprom->name)) {
-			if (!eeprom->valid)
-				ccprintf("warning: eeprom contents invalid\n");
-			if (raw || !eeprom->valid)
-				eeprom_dump_raw(&eeprom->contents);
-			else
-				eeprom_dump(&eeprom->contents);
+			switch (eeprom->state) {
+			case EEPROM_STATE_INVALID:
+				ccprintf("warning: eeprom contents invalid, raw dump:\n");
+				raw = 1;
+			case EEPROM_STATE_VALID: /* fall through */
+				if (raw)
+					eeprom_dump_raw(&eeprom->contents);
+				else
+					eeprom_dump(&eeprom->contents);
+				break;
+			case EEPROM_STATE_MISSING:
+				ccprintf("eeprom not present\n");
+				break;
+			}
+
 			break;
 		}
 	}
@@ -148,13 +167,14 @@ DECLARE_CONSOLE_COMMAND(eepromdump, command_eepromdump,
 
 const void *eeprom_lookup_tag(int which, uint8_t tag)
 {
-	const struct eeprom_info *eeprom;
+	struct eeprom_info *eeprom;
 
 	if (which >= TLV_EEPROM_LAST)
 		return NULL;
 
 	eeprom = eeproms + which;
-	if (!eeprom->valid)
+	load_eeprom(eeprom);
+	if (eeprom->state != EEPROM_STATE_VALID)
 		return NULL;
 
 	return tlv_lookup(eeprom->contents.tlv, eeprom->contents.size, tag);
