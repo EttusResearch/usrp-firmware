@@ -16,3 +16,4 @@ board-y += eeproms.o
 board-y += db_pwr.o
 board-y += led.o
 board-$(CONFIG_FANS) += fan.o
+board-y += mcu_flags.o

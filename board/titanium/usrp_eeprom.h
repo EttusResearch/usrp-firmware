@@ -35,6 +35,12 @@ struct usrp_eeprom_db_pwr_seq {
 	} steps[8];
 };
 
+#define USRP_EEPROM_MCU_FLAGS (0x20)
+#define MCU_FLAGS_AUTOBOOT(flags_) ((flags_)->flags[0] & 0x1)
+#define MCU_FLAGS_BOOTMODE(flags_) ((flags_)->flags[1] & 0xF)
+struct usrp_eeprom_mcu_flags {
+	uint8_t flags[6];
+} __attribute__((packed));
 
 //#include <stdio.h>
 #include <assert.h>
@@ -83,6 +89,15 @@ static void __maybe_unused usrp_eeprom_trace(uint8_t tag, uint8_t len, const voi
 		ccprintf("%s (%02x) ", "usrp_eeprom_db_pwr_seq", tag);
 		for (i = 0; i < 8; i++)
 			ccprintf("(%u, %02x) ", v->steps[i].delay, v->steps[i].supply_mask);
+		ccprintf("\n");
+	}
+	break;
+	case USRP_EEPROM_MCU_FLAGS:
+	{
+		const struct usrp_eeprom_mcu_flags *v = val;
+		ccprintf("%s (0x%02x) ", "usrp_eeprom_mcu_flags", tag);
+		for (i = 0; i < 6; i++)
+			ccprintf("0x%02x ", v->flags[i]);
 		ccprintf("\n");
 	}
 	break;
