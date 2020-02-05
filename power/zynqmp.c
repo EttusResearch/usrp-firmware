@@ -24,6 +24,7 @@
 #include "timer.h"
 #include "util.h"
 #include "pwrsup.h"
+#include "mcu_flags.h"
 
 /* Long power key press to force shutdown in S0 */
 #define FORCED_SHUTDOWN_DELAY  (8 * SECOND)
@@ -32,8 +33,8 @@
 #define CPUTS(outstr) cputs(CC_CHIPSET, outstr)
 #define CPRINTS(format, args...) cprints(CC_CHIPSET, format, ## args)
 
-/* ZynqMP bootmode */
-static uint8_t bootmode = 0x06; /*eMMC mode as default*/
+/* ZynqMP bootmode; default set in power_chipset_init */
+static uint8_t bootmode;
 
 static const struct pwrsup_seq s3s0_ps_seq[] = {
 	{ POWER_SUPPLY_0V85,		5 },
@@ -228,6 +229,10 @@ enum power_state power_chipset_init(void)
 			CPRINTS("already in S0");
 			return POWER_S0;
 		}
+	} else {
+		bootmode = mcu_flags_get_bootmode();
+		if (mcu_flags_get_autoboot())
+			chipset_exit_hard_off();
 	}
 
 	return POWER_G3;
