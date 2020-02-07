@@ -23,6 +23,7 @@
 #include "task.h"
 #include "timer.h"
 #include "util.h"
+#include "pwrsup.h"
 
 /* Long power key press to force shutdown in S0 */
 #define FORCED_SHUTDOWN_DELAY  (8 * SECOND)
@@ -36,64 +37,26 @@
 /* ZynqMP bootmode */
 static uint8_t bootmode = 0x06; /*eMMC mode as default*/
 
-/* Data structure for a GPIO operation for power sequencing */
-struct power_seq_op {
-	/* enum gpio_signal in 8 bits */
-	uint8_t signal;
-	uint8_t level;
-	/* Number of milliseconds to delay after setting signal to level */
-	uint8_t delay;
-	uint8_t feedback_channel;
-	unsigned int feedback_mv;
-
-};
-BUILD_ASSERT(GPIO_COUNT < 256);
-BUILD_ASSERT(ADC_CH_COUNT < 256);
-
-static const struct power_seq_op s3s0_seq[] = {
-	{ GPIO_PS_POR_L,          0, 65, ADC_CH_COUNT,         0 },
-	{ GPIO_CORE_PMB_CNTL,     1,  5, VMON_0V85,            850 * 0.9 },
-	{ GPIO_1V8_EN,            1,  5, VMON_1V8,             1800 * 0.9 },
-	{ GPIO_2V5_EN,            1,  5, VMON_2V5,             2500 * 0.9 },
-	{ GPIO_3V3_EN,            1,  5, VMON_3V3,             3300 * 0.9 },
-	{ GPIO_0V9_EN,            1,  0, VMON_0V9,             900 * 0.9 },
-	{ GPIO_MGTAUX_EN_MCU,     1,  5, ADC_CH_COUNT,         0 },
-	{ GPIO_DDR4N_VDDQ_EN,     1,  5, VMON_1V2_DDRN,        1200 * 0.9 },
-	{ GPIO_DDR4N_VTT_EN,      1,  5, ADC_CH_COUNT,         0 },
-	{ GPIO_DDR4S_VDDQ_EN,     1,  5, VMON_1V2_DDRS,        1200 * 0.9 },
-	{ GPIO_DDR4S_VTT_EN,      1,  5, ADC_CH_COUNT,         0 },
-	{ GPIO_3V6_EN,            1,  5, VMON_3V7,             3600 * 0.9 },
-	{ GPIO_3V3_CLK_EN,        1,  5, ADC_CH_COUNT,         0 },
-	{ GPIO_ADCVCC_EN,         1, 10, ADC_CH_COUNT,         0 },
-	{ GPIO_ADC_VCCAUX_EN,     1,  5, ADC_CH_COUNT,         0 },
-	{ GPIO_DACVCC_EN,         1,  5, VMON_0V925_ADC_DAC,   925 * 0.9 },
-	{ GPIO_DAC_VCCAUX_EN,     1,  5, VMON_1V8_ADC_DAC_AUX, 1800 * 0.9 },
-	{ GPIO_DACVTT_EN,         1,  5, VMON_2V5_DAC_VTT,     2500 * 0.9 },
-	{ GPIO_CLK_DIO_DB_PWR_EN, 1,  5, ADC_CH_COUNT,         0 },
-	{ GPIO_PS_POR_L,          1,  0, ADC_CH_COUNT,         0 },
-	{ GPIO_PS_SRST_L,         1,  0, ADC_CH_COUNT,         0 },
-};
-
-/* TODO: Use non-zero delays here like s3s0_seq? */
-static const struct power_seq_op s0s3_seq[] = {
-	{ GPIO_CLK_DIO_DB_PWR_EN, 0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_DACVTT_EN,         0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_DAC_VCCAUX_EN,     0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_DACVCC_EN,         0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_ADC_VCCAUX_EN,     0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_ADCVCC_EN,         0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_3V3_CLK_EN,        0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_3V6_EN,            0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_DDR4S_VTT_EN,      0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_DDR4S_VDDQ_EN,     0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_DDR4N_VTT_EN,      0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_DDR4N_VDDQ_EN,     0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_MGTAUX_EN_MCU,     0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_0V9_EN,            0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_3V3_EN,            0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_2V5_EN,            0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_1V8_EN,            0,  0, ADC_CH_COUNT, 0 },
-	{ GPIO_CORE_PMB_CNTL,     0,  0, ADC_CH_COUNT, 0 },
+static const struct pwrsup_seq s3s0_ps_seq[] = {
+	{ POWER_SUPPLY_0V85,		5 },
+	{ POWER_SUPPLY_1V8,		5 },
+	{ POWER_SUPPLY_2V5,		5 },
+	{ POWER_SUPPLY_3V3,		5 },
+	{ POWER_SUPPLY_0V9,		0 },
+	{ POWER_SUPPLY_MGTAUX,		5 },
+	{ POWER_SUPPLY_DDR4N_VDDQ,	5 },
+	{ POWER_SUPPLY_DDR4N_VTT,	5 },
+	{ POWER_SUPPLY_DDR4S_VDDQ,	5 },
+	{ POWER_SUPPLY_DDR4S_VTT,	5 },
+	{ POWER_SUPPLY_3V6,		5 },
+	{ POWER_SUPPLY_3V3CLK,		5 },
+	{ POWER_SUPPLY_1V8CLK,		0 },
+	{ POWER_SUPPLY_ADCVCC,		10 },
+	{ POWER_SUPPLY_ADCVCCAUX,	5 },
+	{ POWER_SUPPLY_DACVCC,		5 },
+	{ POWER_SUPPLY_DACVCCAUX,	5 },
+	{ POWER_SUPPLY_DACVTT,		5 },
+	{ POWER_SUPPLY_CLK_DIO,		5 },
 };
 
 static void zynqmp_s0_por(void)
@@ -112,58 +75,6 @@ static void zynqmp_s0_srst(void)
 	gpio_set_level(GPIO_PS_SRST_L, 1);
 }
 
-static int power_seq_adc_wait(enum adc_channel chan, int min_mv)
-{
-	int mv, timeout = 50;
-
-	for (;;) {
-		mv = adc_read_channel(chan);
-		if (mv >= min_mv)
-			break;
-
-		if (!timeout--) {
-			ccprintf("Failed to bringup zynqmp\n");
-			return EC_ERROR_TIMEOUT;
-		}
-
-		msleep(1);
-	}
-
-	return 0;
-}
-
-/**
- * Step through the power sequence table and do corresponding GPIO operations.
- *
- * @param	op		The pointer to the power sequence table.
- * @param	op_count	The number of entries of power_seq_ops.
- * @return	non-zero if error, 0 otherwise.
- */
-static int power_seq_run(const struct power_seq_op *op, int op_count)
-{
-	int err;
-
-	while (op_count--) {
-
-		gpio_set_level(op->signal,
-			       op->level);
-
-		if (op->delay)
-			msleep(op->delay);
-
-		if (op->feedback_channel < ADC_CH_COUNT) {
-			err = power_seq_adc_wait(op->feedback_channel,
-						 op->feedback_mv);
-			if (err)
-				return err;
-		}
-
-		op++;
-	}
-
-	return 0;
-}
-
 static void configure_bootmode(uint8_t mode)
 {
 	gpio_set_level(GPIO_PS_MODE_0, !!(mode & 0x1));
@@ -177,8 +88,6 @@ static int power_error;
 
 enum power_state power_handle_state(enum power_state state)
 {
-	int v, timeout;
-
 	switch (state) {
 	case POWER_G3:
 		break;
@@ -203,22 +112,9 @@ enum power_state power_handle_state(enum power_state state)
 		power_error = 0;
 		return POWER_S5;
 	case POWER_S5S3:
-		if (ioex_set_level(IOEX_PWRDB_12V_EN_L, 0)) {
-			ccprintf("failed to enable 12v rail\n");
-			set_board_power_status(POWER_INPUT_BAD);
-			return POWER_S3S5;
-		}
-
 		/* LTC4234 max turn-on delay is 72ms, give it far longer */
-		timeout = 200;
-		do {
-			if (ioex_get_level(IOEX_PWRDB_VIN_PG, &v) == 0 && v)
-				break;
-			msleep(1);
-		} while (timeout--);
-
-		if (ioex_get_level(IOEX_PWRDB_VIN_PG, &v) || !v) {
-			ccprintf("vin power good is low\n");
+		if (pwrsup_power_on(POWER_SUPPLY_12V, 0, 200)) {
+			ccprintf("failed to enable 12v rail\n");
 			set_board_power_status(POWER_INPUT_BAD);
 			return POWER_S3S5;
 		}
@@ -238,11 +134,17 @@ enum power_state power_handle_state(enum power_state state)
 	case POWER_S3S0:
 		configure_bootmode(bootmode);
 
-		if (power_seq_run(&s3s0_seq[0], ARRAY_SIZE(s3s0_seq))) {
+		gpio_set_level(GPIO_PS_POR_L, 0);
+		msleep(65);
+
+		if (pwrsup_seq_power_on(s3s0_ps_seq, ARRAY_SIZE(s3s0_ps_seq))) {
 			ccprintf("failed to run power seq\n");
 			power_error = 1;
 			return POWER_S0S3;
 		}
+
+		gpio_set_level(GPIO_PS_POR_L, 1);
+		gpio_set_level(GPIO_PS_SRST_L, 1);
 
 		if (power_wait_signals_timeout(IN_ALL_S0, 100 * MSEC)
 						== EC_ERROR_TIMEOUT)  {
@@ -257,7 +159,7 @@ enum power_state power_handle_state(enum power_state state)
 		return POWER_S0;
 	case POWER_S0S3:
 		hook_notify(HOOK_CHIPSET_SUSPEND);
-		power_seq_run(&s0s3_seq[0], ARRAY_SIZE(s0s3_seq));
+		pwrsup_seq_power_off(s3s0_ps_seq, ARRAY_SIZE(s3s0_ps_seq));
 		set_board_power_status(power_error ? POWER_BAD : POWER_INPUT_GOOD);
 		enable_sleep(SLEEP_MASK_AP_RUN);
 		return POWER_S3;
@@ -265,7 +167,7 @@ enum power_state power_handle_state(enum power_state state)
 		hook_notify(HOOK_CHIPSET_SHUTDOWN);
 		return POWER_S5;
 	case POWER_S5G3:
-		ioex_set_level(IOEX_PWRDB_12V_EN_L, 1);
+		pwrsup_power_off(POWER_SUPPLY_12V);
 		return POWER_G3;
 	}
 
