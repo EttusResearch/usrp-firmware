@@ -53,13 +53,17 @@ struct i2c_mux_t i2c_muxes[] = {
 BUILD_ASSERT(ARRAY_SIZE(i2c_muxes) == I2C_MUX_COUNT);
 
 #define I2C_PORT_DB0 10
-#define I2C_PORT_DB1 11
+#define I2C_PORT_DB0_PWR 11
+#define I2C_PORT_DB1 12
+#define I2C_PORT_DB1_PWR 13
 #define I2C_PORT_MON 14
 #define I2C_PORT_TMP464 15
 #define I2C_PORT_PWR 17
 struct i2c_mux_mapping i2c_mux_mappings[] = {
 	{ I2C_PORT_DB0, I2C_MUX_MB, 0},
-	{ I2C_PORT_DB1, I2C_MUX_MB, 1},
+	{ I2C_PORT_DB0_PWR, I2C_MUX_MB, 1},
+	{ I2C_PORT_DB1, I2C_MUX_MB, 2},
+	{ I2C_PORT_DB1_PWR, I2C_MUX_MB, 3},
 	{ I2C_PORT_MON, I2C_MUX_MB, 4},
 	{ I2C_PORT_TMP464, I2C_MUX_MB, 5},
 	{ I2C_PORT_PWR, I2C_MUX_MB, 7},
@@ -187,6 +191,8 @@ BUILD_ASSERT(ARRAY_SIZE(temp_sensors) == TEMP_SENSOR_COUNT);
 #ifdef CONFIG_IO_EXPANDER
 struct ioexpander_config_t ioex_config[] = {
 	{ I2C_PORT_PWR, TCA6416_I2C_ADDR(0), &tca6416_ioexpander_drv },
+	{ I2C_PORT_DB0_PWR, TCA6416_I2C_ADDR(0), &tca6416_ioexpander_drv },
+	{ I2C_PORT_DB1_PWR, TCA6416_I2C_ADDR(0), &tca6416_ioexpander_drv },
 };
 BUILD_ASSERT(ARRAY_SIZE(ioex_config) == CONFIG_IO_EXPANDER_PORT_COUNT);
 #endif
