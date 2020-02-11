@@ -39,8 +39,6 @@
 #define CONFIG_CMD_TEMP_SENSOR
 
 #define CONFIG_CMD_FLASH
-#define CONFIG_CMD_RTC
-#define CONFIG_HOSTCMD_RTC
 
 #define CONFIG_CRC8
 #define CONFIG_SW_CRC
