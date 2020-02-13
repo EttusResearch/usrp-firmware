@@ -179,3 +179,8 @@ const void *eeprom_lookup_tag(int which, uint8_t tag)
 
 	return tlv_lookup(eeprom->contents.tlv, eeprom->contents.size, tag);
 }
+
+int is_board_present(int which)
+{
+	return eeprom_lookup_tag(which, USRP_EEPROM_BOARD_INFO_TAG) != NULL;
+}
