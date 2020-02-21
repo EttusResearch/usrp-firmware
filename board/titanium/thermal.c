@@ -35,14 +35,14 @@ struct temp_zone {
  * Choose good defaults based on data from thermal VnV.
  */
 struct temp_zone temp_zones[TEMP_SENSOR_COUNT] = {
-	{"", 45, 60, 65, 80, 0, COOL_ME, 10, 0}, /* PMBUS-0 */
-	{"", 45, 60, 65, 80, 0, COOL_ME, 10, 0}, /* PMBUS-1 */
-	{"", 35, 50, 60, 70, 0, COOL_ME, 10, 0}, /* EC Internal */
-	{"", 25, 40, 45, 50, 0, COOL_ME, 5,  0}, /* TMP464 Internal */
-	{"", 35, 50, 60, 65, 0, COOL_ME, 5,  0}, /* TMP464 Remote1 */
-	{"", 35, 50, 55, 60, 0, COOL_ME, 25, 0}, /* RFSoC */
-	{"", 25, 35, 40, 45, 0, COOL_ME, 5,  0}, /* TMP464 Remote3 */
-	{"", 35, 50, 55, 60, 0, COOL_ME, 10, 0}, /* TMP464 Remote4 */
+	{"", 50, 85, 90, 100, 0, COOL_ME, 10, 0}, /* PMBUS-0 */
+	{"", 50, 85, 90, 100, 0, COOL_ME, 10, 0}, /* PMBUS-1 */
+	{"", 35, 50, 60, 70, 0, COOL_IGNORE_ME, 10, 0}, /* EC Internal */
+	{"", 25, 40, 45, 50, 0, COOL_IGNORE_ME, 5,  0}, /* TMP464 Internal */
+	{"", 50, 75, 80, 90, 0, COOL_ME, 5,  0}, /* Sample Clock PCB*/
+	{"", 55, 80, 85, 95, 0, COOL_ME, 25, 0}, /* RFSoC */
+	{"", 50, 75, 80, 90, 0, COOL_ME, 5,  0}, /* DRAM PCB */
+	{"", 50, 75, 80, 90, 0, COOL_ME, 10, 0}, /* Power Supply PCB */
 	{"", 50, 80, 85, 100, 0, COOL_ME, 5, 0}, /* TMP112 DB0 Top */
 	{"", 50, 80, 85, 100, 0, COOL_ME, 5, 0}, /* TMP112 DB0 Bottom */
 	{"", 50, 80, 85, 100, 0, COOL_ME, 5, 0}, /* TMP112 DB1 Top */
