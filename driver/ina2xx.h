@@ -61,6 +61,23 @@ enum ina2xx_conv_time {
 #define INA2XX_MASK_EN_SOL        BIT(15)
 
 
+/*
+ * a0/a1 are the values connected to the address pins
+ * gnd = 0, vcc = 1, sda = 2, scl = 3
+ */
+#define INA2XX_I2C_ADDR(a1, a0) (0x40 | ((a1 & 0x3) << 2) | ((a0) & 0x3))
+
+struct ina2xx_t {
+	const char *name;
+	int port;
+	int addr;
+	uint16_t config;
+	uint16_t calib;
+};
+
+/* must contain INA2XX_COUNT elements */
+extern const struct ina2xx_t ina2xx_sensors[];
+
 #if defined(CONFIG_INA231) && defined(CONFIG_INA219)
 #error CONFIG_INA231 and CONFIG_INA219 must not be both defined.
 #endif

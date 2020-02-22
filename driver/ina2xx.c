@@ -19,13 +19,45 @@
 /* I2C base address */
 #define INA2XX_I2C_ADDR_FLAGS 0x40
 
+static int ina2xx_get_port(uint8_t idx)
+{
+#ifdef INA2XX_COUNT
+	if (idx >= INA2XX_COUNT)
+		return EC_ERROR_UNKNOWN;
+
+	return ina2xx_sensors[idx].port;
+#endif
+	return I2C_PORT_MASTER;
+}
+
+static int ina2xx_get_addr(uint8_t idx)
+{
+#ifdef INA2XX_COUNT
+	if (idx >= INA2XX_COUNT)
+		return EC_ERROR_UNKNOWN;
+
+	return ina2xx_sensors[idx].addr;
+#endif
+	return INA2XX_I2C_ADDR_FLAGS | idx;
+}
+
+#ifdef INA2XX_COUNT
+static void ina2xx_hook_init(void)
+{
+	int i;
+
+	for (i = 0; i < INA2XX_COUNT; i++)
+		ina2xx_init(i, ina2xx_sensors[i].config, ina2xx_sensors[i].calib);
+}
+DECLARE_HOOK(HOOK_INIT, ina2xx_hook_init, HOOK_PRIO_DEFAULT);
+#endif
+
 uint16_t ina2xx_read(uint8_t idx, uint8_t reg)
 {
 	int res;
 	int val;
 
-	res = i2c_read16(I2C_PORT_MASTER, INA2XX_I2C_ADDR_FLAGS | idx,
-			 reg, &val);
+	res = i2c_read16(ina2xx_get_port(idx), ina2xx_get_addr(idx), reg, &val);
 	if (res) {
 		CPRINTS("INA2XX I2C read failed");
 		return 0x0bad;
@@ -38,8 +70,8 @@ int ina2xx_write(uint8_t idx, uint8_t reg, uint16_t val)
 	int res;
 	uint16_t be_val = (val >> 8) | ((val & 0xff) << 8);
 
-	res = i2c_write16(I2C_PORT_MASTER, INA2XX_I2C_ADDR_FLAGS | idx,
-			  reg, be_val);
+	res = i2c_write16(ina2xx_get_port(idx), ina2xx_get_addr(idx), reg,
+			  be_val);
 	if (res)
 		CPRINTS("INA2XX I2C write failed");
 	return res;
