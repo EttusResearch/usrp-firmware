@@ -102,6 +102,9 @@ int ina2xx_init(uint8_t idx, uint16_t config, uint16_t calib);
 /* Return bus voltage in milliVolts */
 int ina2xx_get_voltage(uint8_t idx);
 
+/* Return shunt voltage in microvolts */
+int ina2xx_get_shunt_voltage(uint8_t idx);
+
 /* Return current in milliAmps */
 int ina2xx_get_current(uint8_t idx);
 

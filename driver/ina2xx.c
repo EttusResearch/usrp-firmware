@@ -62,6 +62,12 @@ int ina2xx_get_voltage(uint8_t idx)
 	return INA2XX_BUS_MV((int)bv);
 }
 
+int ina2xx_get_shunt_voltage(uint8_t idx)
+{
+	uint16_t sv = ina2xx_read(idx, INA2XX_REG_SHUNT_VOLT);
+	return INA2XX_SHUNT_UV((int)sv);
+}
+
 int ina2xx_get_current(uint8_t idx)
 {
 	int16_t curr = ina2xx_read(idx, INA2XX_REG_CURRENT);
