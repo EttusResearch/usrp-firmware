@@ -44,7 +44,7 @@ static int get_temp(const struct tmp112_t *dev, int *temp_ptr)
 	int temp_raw = 0;
 
 	rv = raw_read16(dev, TMP112_REG_TEMP, &temp_raw);
-	if (rv < 0)
+	if (rv != EC_SUCCESS)
 		return rv;
 
 	*temp_ptr = (int)(int16_t)temp_raw;
@@ -65,6 +65,9 @@ int tmp112_get_val(int idx, int *temp_ptr)
 	if (idx >= TMP112_COUNT)
 		return EC_ERROR_INVAL;
 
+	if (temp_val_local[idx] == -1)
+		return EC_ERROR_UNKNOWN;
+
 	*temp_ptr = temp_val_local[idx];
 	return EC_SUCCESS;
 }
@@ -72,11 +75,14 @@ int tmp112_get_val(int idx, int *temp_ptr)
 static void tmp112_poll(void)
 {
 	int temp_c = 0;
-	int i;
+	int i, rv;
 
 	for (i = 0; i < TMP112_COUNT; i++) {
-		if (get_temp(tmp112_sensors + i, &temp_c) == EC_SUCCESS)
+		rv = get_temp(tmp112_sensors + i, &temp_c);
+		if (rv == EC_SUCCESS)
 			temp_val_local[i] = C_TO_K(tmp112_reg_to_c(temp_c));
+		else
+			temp_val_local[i] = -1;
 	}
 }
 DECLARE_HOOK(HOOK_SECOND, tmp112_poll, HOOK_PRIO_TEMP_SENSOR);
