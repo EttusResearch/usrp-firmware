@@ -1,4 +1,5 @@
 #include "assert.h"
+#include "board_power.h"
 #include "chipset.h"
 #include "common.h"
 #include "console.h"
@@ -6,8 +7,13 @@
 #include "fan.h"
 #include "hooks.h"
 #include "host_command.h"
+#include "keyboard_protocol.h"
+#include "keyboard_scan.h"
+#include "led.h"
+#include "pwrsup.h"
 #include "printf.h"
 #include "temp_sensor.h"
+#include "timer.h"
 #include "util.h"
 
 /* #define COOLING_STRATEGY_COOL_MAX */
@@ -93,6 +99,115 @@ static int get_total_cooling_weight(void)
 	return total_cooling_weight;
 }
 
+#define FAN_THERMAL_SHUTDOWN_DUTY 40
+static void thermal_shutdown_run_fans(void)
+{
+	/* Turn on fan power supply */
+	if (pwrsup_power_on(POWER_SUPPLY_12V, 0, 200)) {
+		ccprintf("failed to enable 12v rail\n");
+		ccprintf("can not turn on fans!\n");
+		set_board_power_status(POWER_INPUT_BAD);
+		return;
+	}
+
+	/* Configure fans to run in manual mode at fixed duty cycle. */
+	for (uint8_t fan = 0; fan < FAN_CH_COUNT; fan++) {
+		fan_set_rpm_mode(FAN_CH(fan), 0);
+		fan_set_enabled(FAN_CH(fan), 1);
+		gpio_set_level(fans[fan].conf->enable_gpio, 1);
+		fan_set_duty(FAN_CH(fan), FAN_THERMAL_SHUTDOWN_DUTY);
+	}
+}
+
+static void force_thermal_shutdown(void)
+{
+	chipset_force_shutdown(CHIPSET_SHUTDOWN_THERMAL);
+
+	/* Set visual indication of thermal shutdown */
+	set_board_power_status(POWER_BAD);
+
+	/* Turn on cooling */
+	thermal_shutdown_run_fans();
+}
+DECLARE_DEFERRED(force_thermal_shutdown);
+
+#define THERMAL_SHUTDOWN_DELAY (2 * SECOND)
+
+static int thermal_shutdown_state = 0;
+static void thermal_shutdown(void)
+{
+	ccprintf("initiating thermal shutdown!\n");
+
+	/* Initiate orderly power down on PS using MKBP mechanism. */
+
+	/* Simulate power button press for fixed duration */
+	keyboard_update_button(KEYBOARD_BUTTON_POWER, 1);
+	msleep(200);
+
+	/* Simulate power button release */
+	keyboard_update_button(KEYBOARD_BUTTON_POWER, 0);
+
+	/*
+	 * TODO: Modify to have a mechanism which polls PS shutdown complete
+	 * signal with timeout when it is implemented. Until then bring down
+	 * power rails after a fixed delay.
+	 */
+	hook_call_deferred(&force_thermal_shutdown_data, THERMAL_SHUTDOWN_DELAY);
+}
+
+/* TODO: Add support to read this from EEPROM during init_temp_zones()? */
+static int thermal_restart_enable = 1;
+static int get_thermal_restart_enable(void)
+{
+	return thermal_restart_enable;
+}
+
+static void thermal_shutdown_recovery(void)
+{
+	if (chipset_in_state(CHIPSET_STATE_ON)) {
+		ccprintf("device already recovered from thermal shutdown!\n");
+		thermal_shutdown_state = 0;
+		return;
+	}
+
+	if (get_thermal_restart_enable()) {
+		ccprintf("starting recovery from thermal shutdown\n");
+		chipset_exit_hard_off();
+		thermal_shutdown_state = 0;
+	}
+
+	/* TODO: How to detect and recover from failure? */
+}
+
+static int all_zones_below_warning(void)
+{
+	int rv, t_zone;
+	int below_warning = 1;
+
+	for (int i = 0; i < TEMP_SENSOR_COUNT; i++) {
+		struct temp_zone *z = &temp_zones[i];
+
+		if (z->cooling_required != COOL_ME)
+			continue;
+
+		rv = temp_sensor_read(i /* temp_sensor_id */, &t_zone);
+		if (rv) {
+			ccprintf("warning! failed to read %s temperature sensor!\n",
+				temp_sensors[i].name);
+			below_warning = 0;
+			break;
+		}
+
+		t_zone = K_TO_C(t_zone);
+		if (t_zone >= z->t_warn) {
+			below_warning = 0;
+			break;
+		}
+	}
+
+	return below_warning;
+}
+
 static void cooling_calculator(void)
 {
 	int rv, t_zone;
@@ -120,17 +235,7 @@ static void cooling_calculator(void)
 
 		t_zone = K_TO_C(t_zone);
 
-		if (t_zone >= z->t_crit) {
-			/*
-			 * TODO: This is an insufficient solution for thermal
-			 * shutdown because it can be easily disabled when
-			 * thermal control of fans is disabled. Modify.
-			 */
-			ccprintf("%s temperature: %d is critical, "
-				"forcing shutdown\n",
-				z->name, t_zone);
-			chipset_force_shutdown(CHIPSET_SHUTDOWN_THERMAL);
-		} else if (t_zone >= z->t_warn) {
+		if (t_zone >= z->t_warn) {
 			ccprintf("%s temperature: %d is above warning limit, "
 				"maximum cooling\n",
 				z->name, t_zone);
@@ -219,7 +324,59 @@ static void temp_control(void)
 	fan_set_percent_needed(FAN_CH_0, aggregate_cooling);
 	fan_set_percent_needed(FAN_CH_1, aggregate_cooling);
 }
-DECLARE_HOOK(HOOK_SECOND, temp_control, HOOK_PRIO_TEMP_SENSOR_DONE + 2);
+DECLARE_HOOK(HOOK_SECOND, temp_control, HOOK_PRIO_TEMP_SENSOR_DONE + 3);
+
+static void critical_monitor(void)
+{
+	int rv, t_zone;
+
+	/* Don't do anything if we are in thermal shutdown or not-powered up */
+	if (thermal_shutdown_state || chipset_in_state(CHIPSET_STATE_HARD_OFF))
+		return;
+
+	for (int i = 0; i < TEMP_SENSOR_COUNT; i++) {
+		struct temp_zone *z = &temp_zones[i];
+
+		if (z->cooling_required != COOL_ME) {
+			continue;
+		}
+
+		rv = temp_sensor_read(i /* temp_sensor_id */, &t_zone);
+		/*
+		 * TODO: Stricter policy? Keep track of sensor read failures and
+		 * shutdown if repeated errors?
+		 */
+		if (rv) {
+			ccprintf("warning! failed to read %s temperature sensor!\n",
+				temp_sensors[i].name);
+			continue;
+		}
+
+		t_zone = K_TO_C(t_zone);
+
+		if (t_zone >= z->t_crit) {
+			ccprintf("%s temperature: %d is critical\n",
+				z->name, t_zone);
+			thermal_shutdown_state = 1;
+			thermal_shutdown();
+			return;
+		}
+	}
+}
+DECLARE_HOOK(HOOK_SECOND, critical_monitor, HOOK_PRIO_TEMP_SENSOR_DONE + 2);
+
+static void recovery_monitor(void)
+{
+	/* If we are NOT in thermal shutdown state; do nothing. */
+	if (!thermal_shutdown_state)
+		return;
+
+	/* Check that board is cool enough to restart after thermal shutdown */
+	if (all_zones_below_warning())
+		thermal_shutdown_recovery();
+}
+DECLARE_HOOK(HOOK_SECOND, recovery_monitor, HOOK_PRIO_TEMP_SENSOR_DONE + 4);
+
 
 static int command_tempzones(int argc, char **argv)
 {
@@ -230,6 +387,9 @@ static int command_tempzones(int argc, char **argv)
 	if (!is_thermal_control_enabled(FAN_CH_0) ||
 		!is_thermal_control_enabled(FAN_CH_1))
 		ccprintf("warning! thermal algorithm is currently disabled!\n");
+
+	if (thermal_shutdown_state)
+		ccprintf("device is in thermal shutdown state\n");
 
 	if (argc == 1) {
 		total_cooling_weight = get_total_cooling_weight();
