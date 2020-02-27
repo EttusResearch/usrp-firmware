@@ -37,6 +37,7 @@ struct usrp_eeprom_db_pwr_seq {
 
 #define USRP_EEPROM_MCU_FLAGS (0x20)
 #define MCU_FLAGS_AUTOBOOT(flags_) ((flags_)->flags[0] & 0x1)
+#define MCU_FLAGS_DISABLE_THERMAL_RECOVERY(flags_) ((flags_)->flags[0] & 0x2)
 #define MCU_FLAGS_BOOTMODE(flags_) ((flags_)->flags[1] & 0xF)
 struct usrp_eeprom_mcu_flags {
 	uint8_t flags[6];

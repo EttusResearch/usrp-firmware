@@ -37,3 +37,12 @@ uint8_t mcu_flags_get_autoboot(void)
 
 	return 0;
 }
+
+uint8_t mcu_flags_get_thermal_recovery(void)
+{
+	if (mcu_flags_present())
+		return !MCU_FLAGS_DISABLE_THERMAL_RECOVERY(mcu_flags);
+
+	/* Enable thermal recovery by default */
+	return 1;
+}

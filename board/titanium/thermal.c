@@ -10,6 +10,7 @@
 #include "keyboard_protocol.h"
 #include "keyboard_scan.h"
 #include "led.h"
+#include "mcu_flags.h"
 #include "pwrsup.h"
 #include "printf.h"
 #include "temp_sensor.h"
@@ -155,22 +156,15 @@ static void thermal_shutdown(void)
 	hook_call_deferred(&force_thermal_shutdown_data, THERMAL_SHUTDOWN_DELAY);
 }
 
-/* TODO: Add support to read this from EEPROM during init_temp_zones()? */
-static int thermal_restart_enable = 1;
-static int get_thermal_restart_enable(void)
-{
-	return thermal_restart_enable;
-}
-
 static void thermal_shutdown_recovery(void)
 {
 	if (chipset_in_state(CHIPSET_STATE_ON)) {
-		ccprintf("device already recovered from thermal shutdown!\n");
+		ccprintf("device recovered from thermal shutdown!\n");
 		thermal_shutdown_state = 0;
 		return;
 	}
 
-	if (get_thermal_restart_enable()) {
+	if (mcu_flags_get_thermal_recovery()) {
 		ccprintf("starting recovery from thermal shutdown\n");
 		chipset_exit_hard_off();
 		thermal_shutdown_state = 0;
