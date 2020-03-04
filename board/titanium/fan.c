@@ -13,6 +13,7 @@
 #include "clock-f.h"
 #include "console.h"
 #include "hwtimer.h"
+#include "pwrsup.h"
 #include "task.h"
 #include "registers.h"
 #include "system.h"
@@ -185,6 +186,11 @@ int fan_get_enabled(int ch)
 		&& fan_speed_state[ch].enabled;
 }
 
+int fan_power_is_good(void)
+{
+	return pwrsup_get_status(POWER_SUPPLY_12V) == PWRSUP_STATUS_ON;
+}
+
 void fan_set_duty(int ch, int percent)
 {
 	const struct fan_t *fan = fans + ch;
@@ -260,7 +266,7 @@ enum fan_status fan_get_status(int ch)
 int fan_is_stalled(int ch)
 {
 	if (!fan_get_enabled(ch) || fan_get_rpm_target(ch) == 0 ||
-	    !fan_get_duty(ch))
+	    !fan_get_duty(ch) || !fan_power_is_good())
 		return 0;
 
 	return !fan_get_rpm_actual(ch);
@@ -295,6 +301,10 @@ DECLARE_HOOK(HOOK_INIT, fan_init, HOOK_PRIO_INIT_FAN);
 void fan_ctrl(void)
 {
 	int32_t ch, duty, diff, actual, target, last_diff;
+
+	if (!fan_power_is_good())
+		return;
+
 	for (ch = 0; ch < FAN_CH_COUNT; ch++)
 	{
 		if (!fan_get_enabled(ch) && !fan_get_duty(ch))
@@ -327,8 +337,9 @@ void fan_ctrl(void)
 				duty += 10;
 			} else if (diff > 500) {
 				duty += 5;
-			} else if (diff > 100)
+			} else if (diff > 100) {
 				duty += 1;
+			}
 
 			duty = duty > 100 ? 100 : duty;
 
@@ -340,11 +351,11 @@ void fan_ctrl(void)
 				fan_speed_state[ch].sts = FAN_STATUS_FRUSTRATED;
 				continue;
 			} else if (diff < -1000) {
-				duty-=10;
+				duty -= 10;
 			} else if (diff < -500) {
-				duty-=5;
+				duty -= 5;
 			} else if (diff < -100) {
-				duty-=5;
+				duty -= 1;
 			}
 			duty = duty < 0 ? 0 : duty;
 
@@ -408,6 +419,37 @@ void __fans_capture_irq(void)
 }
 DECLARE_IRQ(IRQ_TIM(TIM_CAPTURE_FAN0_1), __fans_capture_irq, 2);
 #endif /* TIM_CAPTURE_FAN0_1 */
+
+/*
+ * This monitor checks if the the total number of fan rotations has incremented
+ * and mark them as STOPPED if they haven't. Also the ccr_irq
+ * (interrupt count) is set to zero which sets the output of fan_is_stalled()
+ * true. This is done for all fans.
+ */
+void fan_health_monitor(void)
+{
+	static uint16_t fan_counter[FAN_CH_COUNT];
+	for (uint8_t fan = 0; fan < FAN_CH_COUNT; fan++) {
+		if (!fan_get_enabled(fan) ||
+			!fan_get_duty(fan) ||
+			!fan_power_is_good() ||
+			(fan_get_rpm_mode(fan) &&
+				fan_get_rpm_target(fan) == 0)) {
+			continue;
+		} else if (fan_counter[fan] == fan_speed_state[fan].counter_new) {
+			/* # cycles didn't increment; fan is not spinning */
+			fan_speed_state[fan].ccr_irq = 0;
+			fan_speed_state[fan].sts = FAN_STATUS_STOPPED;
+		} else {
+			fan_speed_state[fan].sts = FAN_STATUS_CHANGING;
+		}
+	}
+
+	/* Store current values for next comparison */
+	for (uint8_t fan = 0; fan < FAN_CH_COUNT; fan++)
+		fan_counter[fan] = fan_speed_state[fan].counter_new;
+}
+DECLARE_HOOK(HOOK_SECOND, fan_health_monitor, HOOK_PRIO_DEFAULT);
 
 /*
  * Fan Test:
