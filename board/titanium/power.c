@@ -23,27 +23,43 @@
 
 struct rail_monitor {
 	uint8_t adc_channel; /* voltage monitor */
-	int ina_idx; /* current monitor */
+	int (*get_power)(uint8_t);
+	uint8_t priv; /* arg to get_power */
 };
 
+static int get_0v85_power(uint8_t ignored)
+{
+	int val, v, curr = 0;
+
+	for (size_t i = 0; i < PMBUS_DEV_COUNT; i++) {
+		val = 0;
+		pmbus_read_curr_out(i, &val);
+		curr += val;
+	}
+
+	v = adc_read_channel(VMON_0V85);
+
+	return (curr * v) / 1000 /*mW*/;
+}
+
 static const struct rail_monitor rail_monitors[] = {
-	{VMON_VBATT, -1},
-	{ADC1_17, -1},
-	{VMON_0V9, INA2XX_0V9},
-	{VMON_0V85, -1},
-	{VMON_0V6_DDR_VREF, -1},
-	{VMON_0V925_ADC_DAC, -1},
-	{VMON_1V2_DDRS, INA2XX_1V2S},
-	{VMON_1V2_DDRN, INA2XX_1V2N},
-	{VMON_0V6_DDR_VTT, -1},
-	{VMON_1V8_ADC_DAC_AUX, -1},
-	{VMON_1V8, INA2XX_1V8},
-	{VMON_2V5, INA2XX_2V5},
-	{VMON_2V5_DAC_VTT, -1},
-	{VMON_1V8_CLK, -1},
-	{VMON_3V3, INA2XX_3V3},
-	{VMON_3V3_CLK, -1},
-	{VMON_3V7, INA2XX_3V6},
+	{ VMON_VBATT },
+	{ ADC1_17 },
+	{ VMON_0V9, ina2xx_get_power, INA2XX_0V9},
+	{ VMON_0V85, get_0v85_power },
+	{ VMON_0V6_DDR_VREF },
+	{ VMON_0V925_ADC_DAC },
+	{ VMON_1V2_DDRS, ina2xx_get_power, INA2XX_1V2S},
+	{ VMON_1V2_DDRN, ina2xx_get_power, INA2XX_1V2N},
+	{ VMON_0V6_DDR_VTT },
+	{ VMON_1V8_ADC_DAC_AUX },
+	{ VMON_1V8, ina2xx_get_power, INA2XX_1V8 },
+	{ VMON_2V5, ina2xx_get_power, INA2XX_2V5 },
+	{ VMON_2V5_DAC_VTT },
+	{ VMON_1V8_CLK },
+	{ VMON_3V3, ina2xx_get_power, INA2XX_3V3 },
+	{ VMON_3V3_CLK, },
+	{ VMON_3V7, ina2xx_get_power, INA2XX_3V6},
 };
 #define RAIL_MONITOR_COUNT 17
 BUILD_ASSERT(ARRAY_SIZE(rail_monitors) == RAIL_MONITOR_COUNT);
@@ -64,7 +80,7 @@ struct ina_measurement {
 static int command_powerstats(int argc, char **argv)
 {
 	int rv;
-	int v, curr, show_details = 0, dump_all = 0, input_power, rail_0V85_power;
+	int v, curr, show_details = 0, dump_all = 0, input_power;
 	int temps[TEMP_SENSOR_COUNT] = {0};
 	int adc_measurements[RAIL_MONITOR_COUNT];
 	struct ina_measurement ina_measurements[INA2XX_COUNT];
@@ -118,10 +134,6 @@ static int command_powerstats(int argc, char **argv)
 		pmbus_measurements[i].current = curr;
 	}
 
-	v = adc_read_channel(VMON_0V85);
-	/* Total current = Master Current + Slave Current */
-	rail_0V85_power = ((pmbus_measurements[0].current + pmbus_measurements[1].current) * v) / 1000 /*mW*/;
-
 	/* LTC4234 Monitor Current (IMON) Calculation */
 	/* imon current = ((voltage across 20k resistor) / (full voltage range 2000 mV)) * (full scale current 20000 mA) */
 	curr = adc_read_channel(VMON_VIN_IMON) * 10;
@@ -135,22 +147,16 @@ static int command_powerstats(int argc, char **argv)
 		/* Dump them all! */
 		ccprintf("\n**** All Metrics ****\n");
 		for (size_t i = 0; i < RAIL_MONITOR_COUNT; i++) {
+			const struct rail_monitor *rail_mon = rail_monitors + i;
+
 			ccprintf("%s Voltage,%dmV\n",
-				adc_channels[rail_monitors[i].adc_channel].name,
+				adc_channels[rail_mon->adc_channel].name,
 				adc_measurements[i]);
-			if (rail_monitors[i].ina_idx == -1)
-				if (rail_monitors[i].adc_channel == VMON_0V85)
-					ccprintf("%s Power,%dmW\n",
-						adc_channels[rail_monitors[i].adc_channel].name,
-						rail_0V85_power);
-				else
-					ccprintf("%s Power,%s\n",
-						adc_channels[rail_monitors[i].adc_channel].name,
-						"NA");
-			else
+
+			if (rail_mon->get_power)
 				ccprintf("%s Power,%dmW\n",
-					adc_channels[rail_monitors[i].adc_channel].name,
-					ina2xx_get_power(rail_monitors[i].ina_idx));
+					adc_channels[rail_mon->adc_channel].name,
+					rail_mon->get_power(rail_mon->priv));
 		}
 
 		ccprintf("Input Power,%dmW\n", input_power);
@@ -188,22 +194,16 @@ static int command_powerstats(int argc, char **argv)
 	ccprintf("\n**** Summary ****\n");
 	ccprintf("%-25s%-20s%-20s\n", "Name", "Voltage (mV)", "Power (mW)");
 	for (size_t i = 0; i < RAIL_MONITOR_COUNT; i++) {
-		if (rail_monitors[i].ina_idx == -1)
-			if (rail_monitors[i].adc_channel == VMON_0V85)
-				ccprintf("%-25s%-20d%-20d\n",
-					adc_channels[rail_monitors[i].adc_channel].name,
-					adc_measurements[i],
-					rail_0V85_power);
-			else
-				ccprintf("%-25s%-20d%-20s\n",
-					adc_channels[rail_monitors[i].adc_channel].name,
-					adc_measurements[i],
-					"NA");
+		const struct rail_monitor *rail_mon = rail_monitors + i;
+
+		ccprintf("%-25s%-20d",
+			adc_channels[rail_mon->adc_channel].name,
+			adc_measurements[i]);
+
+		if (rail_mon->get_power)
+			ccprintf("%-20d\n", rail_mon->get_power(rail_mon->priv));
 		else
-			ccprintf("%-25s%-20d%-20d\n",
-				adc_channels[rail_monitors[i].adc_channel].name,
-				adc_measurements[i],
-				ina2xx_get_power(rail_monitors[i].ina_idx));
+			ccprintf("%-20s\n", "NA");
 	}
 
 	ccprintf("%-25s%-20d%-20d\n", "Input Power", v, input_power);
