@@ -3,7 +3,6 @@
  * found in the LICENSE file.
  */
 
-#include "fan.h"
 #include "hooks.h"
 #include "pwm.h"
 #include "common.h"
@@ -18,6 +17,9 @@
 #include "registers.h"
 #include "system.h"
 #include "util.h"
+#include "usrp_eeprom.h"
+#include "eeproms.h"
+#include "fan.h"
 
 
 #define IRQ_TIM(n) CONCAT2(STM32_IRQ_TIM, n)
@@ -255,6 +257,9 @@ test_mockable void fan_set_rpm_target(int ch, int rpm)
 
 	if (rpm < fan->rpm->rpm_min)
 		rpm = fan->rpm->rpm_min;
+	else if (rpm > fan->rpm->rpm_max)
+		rpm = fan->rpm->rpm_max;
+
 	fan_speed_state[ch].rpm_target = rpm;
 }
 
@@ -272,9 +277,22 @@ int fan_is_stalled(int ch)
 	return !fan_get_rpm_actual(ch);
 }
 
+void fan_init_limits_from_eeprom(void)
+{
+	const struct usrp_eeprom_fan_limits *fan_limits;
+	fan_limits = eeprom_lookup_tag(TLV_EEPROM_MB, USRP_EEPROM_FAN_LIMITS);
+	if (!fan_limits)
+		return;
+
+	for (int fan = 0; fan < FAN_CH_COUNT; fan++) {
+		fans[fan].rpm->rpm_min = fan_limits->min;
+		fans[fan].rpm->rpm_start = fan_limits->start;
+		fans[fan].rpm->rpm_max = fan_limits->max;
+	}
+}
+
 void fan_channel_setup(int ch, unsigned int flags)
 {
-	/* TODO: Fetch the min and max fan speed values from EEPROM */
 	pwm_enable(ch, 1);
 	pwm_set_duty(ch, 0);
 
@@ -285,6 +303,8 @@ void fan_channel_setup(int ch, unsigned int flags)
 void fan_init(void)
 {
 	int i;
+
+	fan_init_limits_from_eeprom();
 
 	for (i = 0; i < FAN_CH_COUNT; i++)
 		fan_channel_setup(i, 0);

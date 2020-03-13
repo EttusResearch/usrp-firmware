@@ -301,13 +301,13 @@ const struct fan_conf fan_conf_1 = {
 	.enable_gpio = GPIO_FAN_1_EN,
 };
 
-const struct fan_rpm fan_rpm_0 = {
+struct fan_rpm fan_rpm_0 = {
 	.rpm_min = 4000,
 	.rpm_start = 8000,
 	.rpm_max = 12400,
 };
 
-const struct fan_rpm fan_rpm_1 = {
+struct fan_rpm fan_rpm_1 = {
 	.rpm_min = 4000,
 	.rpm_start = 8000,
 	.rpm_max = 12400,

@@ -43,6 +43,13 @@ struct usrp_eeprom_mcu_flags {
 	uint8_t flags[6];
 } __attribute__((packed));
 
+#define USRP_EEPROM_FAN_LIMITS (0x21)
+struct usrp_eeprom_fan_limits {
+	uint16_t min;
+	uint16_t start;
+	uint16_t max;
+} __attribute__((packed));
+
 //#include <stdio.h>
 #include <assert.h>
 
@@ -99,6 +106,14 @@ static void __maybe_unused usrp_eeprom_trace(uint8_t tag, uint8_t len, const voi
 		ccprintf("%s (0x%02x) ", "usrp_eeprom_mcu_flags", tag);
 		for (i = 0; i < 6; i++)
 			ccprintf("0x%02x ", v->flags[i]);
+		ccprintf("\n");
+	}
+	break;
+	case USRP_EEPROM_FAN_LIMITS:
+	{
+		const struct usrp_eeprom_fan_limits *v = val;
+		ccprintf("%s (0x%02x) ", "usrp_eeprom_fan_limits", tag);
+		ccprintf("min: %d, start: %d, max: %d", v->min, v->start, v->max);
 		ccprintf("\n");
 	}
 	break;
