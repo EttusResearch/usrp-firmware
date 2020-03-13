@@ -1605,6 +1605,12 @@
  */
 #undef CONFIG_FAN_UPDATE_PERIOD
 
+/*
+ * Allow fan_rpm configuration to be non-const. Without this the fan_rpm
+ * is fixed (non-mutable) as defined in the board.c.
+ */
+#undef CONFIG_FAN_RPM_MUTABLE
+
 /*****************************************************************************/
 /* Flash configuration */
 

@@ -28,7 +28,11 @@ struct fan_rpm {
 /* Characteristic of each physical fan */
 struct fan_t {
 	const struct fan_conf *conf;
+#ifdef CONFIG_FAN_RPM_MUTABLE
+	struct fan_rpm *rpm;
+#else
 	const struct fan_rpm *rpm;
+#endif
 };
 
 /* Values for .flags field */
