@@ -10,6 +10,7 @@
 #include "keyboard_protocol.h"
 #include "keyboard_scan.h"
 #include "led.h"
+#include "math_util.h"
 #include "mcu_flags.h"
 #include "pwrsup.h"
 #include "printf.h"
@@ -35,6 +36,15 @@ struct temp_zone {
 	enum cooling_required cooling_required;
 	int cooling_weight; /* percentage */
 	int cooling_requirement;
+	int kp; /* percent proportional factor */
+	int ki; /* percent integral factor */
+	/*
+	 * Note: We express KP and KI as percentages because it allows us to set
+	 * them to non-integral values like 4.5 which will be set/appear as 450.
+	 * We account for them being percentages by dividing by 100 when they
+	 * are used for cooling calculation. This in turn gives a little more
+	 * fine-grained control over each zone's cooling requirement.
+	 */
 };
 
 /*
@@ -42,18 +52,18 @@ struct temp_zone {
  * Choose good defaults based on data from thermal VnV.
  */
 struct temp_zone temp_zones[TEMP_SENSOR_COUNT] = {
-	{"", 50, 85, 90, 100, 0, COOL_ME, 10, 0}, /* PMBUS-0 */
-	{"", 50, 85, 90, 100, 0, COOL_ME, 10, 0}, /* PMBUS-1 */
-	{"", 35, 50, 60, 70, 0, COOL_IGNORE_ME, 10, 0}, /* EC Internal */
-	{"", 25, 40, 45, 50, 0, COOL_IGNORE_ME, 5,  0}, /* TMP464 Internal */
-	{"", 50, 75, 80, 90, 0, COOL_ME, 5,  0}, /* Sample Clock PCB*/
-	{"", 55, 80, 85, 95, 0, COOL_ME, 25, 0}, /* RFSoC */
-	{"", 50, 75, 80, 90, 0, COOL_ME, 5,  0}, /* DRAM PCB */
-	{"", 50, 75, 80, 90, 0, COOL_ME, 10, 0}, /* Power Supply PCB */
-	{"", 50, 80, 85, 100, 0, COOL_ME, 5, 0}, /* TMP112 DB0 Top */
-	{"", 50, 80, 85, 100, 0, COOL_ME, 5, 0}, /* TMP112 DB0 Bottom */
-	{"", 50, 80, 85, 100, 0, COOL_ME, 5, 0}, /* TMP112 DB1 Top */
-	{"", 50, 80, 85, 100, 0, COOL_ME, 5, 0}, /* TMP112 DB1 Bottom */
+	{"", 50, 85, 90, 100, 0, COOL_ME, 10, 0, 250, 50}, /* PMBUS-0 */
+	{"", 50, 85, 90, 100, 0, COOL_ME, 10, 0, 250, 50}, /* PMBUS-1 */
+	{"", 35, 50, 60, 70, 0, COOL_IGNORE_ME, 10, 0, 400, 50}, /* EC Internal */
+	{"", 25, 40, 45, 50, 0, COOL_IGNORE_ME, 5,  0, 500, 50}, /* TMP464 Internal */
+	{"", 50, 75, 80, 90, 0, COOL_ME, 5,  0, 300, 50}, /* Sample Clock PCB*/
+	{"", 55, 80, 85, 95, 0, COOL_ME, 25, 0, 250, 50}, /* RFSoC */
+	{"", 50, 75, 80, 90, 0, COOL_ME, 5,  0, 300, 50}, /* DRAM PCB */
+	{"", 50, 75, 80, 90, 0, COOL_ME, 10, 0, 300, 50}, /* Power Supply PCB */
+	{"", 50, 80, 85, 100, 0, COOL_ME, 5, 0, 1500, 50}, /* TMP112 DB0 Top */
+	{"", 50, 80, 85, 100, 0, COOL_ME, 5, 0, 1500, 50}, /* TMP112 DB0 Bottom */
+	{"", 50, 80, 85, 100, 0, COOL_ME, 5, 0, 1500, 50}, /* TMP112 DB1 Top */
+	{"", 50, 80, 85, 100, 0, COOL_ME, 5, 0, 1500, 50}, /* TMP112 DB1 Bottom */
 };
 BUILD_ASSERT(ARRAY_SIZE(temp_zones) == TEMP_SENSOR_COUNT);
 
@@ -202,21 +212,114 @@ static int all_zones_below_warning(void)
 	return below_warning;
 }
 
+/*TODO: Choose good defaults based on thermal VnV. */
+int pid_allowed_abs_min_error = 1; /* deg C */
+int pid_allowed_abs_max_error = 10; /* deg C */
+int pid_allowed_abs_max_integral = 25; /* deg C */
+int pid_error_history_length = 5; /* number of readings used for averaging */
+int pid_debug = 0; /* enable/disable debug prints */
+
+#define ERR_HISTORY_MIN 1 /* at least one reading */
+#define ERR_HISTORY_MAX 120 /* number of readings */
+#define ERR_INIT 2 /* deg C initial error, arbitrary */
+static int error_signal[TEMP_SENSOR_COUNT][ERR_HISTORY_MAX];
+void init_error_signal(void)
+{
+	for (int i = 0; i < TEMP_SENSOR_COUNT; i++)
+		for (int j = 0; j < ERR_HISTORY_MAX; j++)
+			error_signal[i][j] = ERR_INIT;
+}
+DECLARE_HOOK(HOOK_INIT, init_error_signal, HOOK_PRIO_INIT_I2C + 2);
+
+void pid_debug_print(char * format, ...)
+{
+	if (pid_debug) {
+		char buffer[256];
+		va_list args;
+		va_start(args, format);
+		vsnprintf(buffer, sizeof(buffer), format, args);
+		ccprintf("%s", buffer);
+		va_end(args);
+	}
+}
+
+void update_average_error(float* error_signal_avg)
+{
+	int rv, t_zone, error, sum_error;
+	static uint8_t instant;
+
+	pid_debug_print("new_err::");
+
+	for (int i = 0; i < TEMP_SENSOR_COUNT; i++) {
+		struct temp_zone *z = &temp_zones[i];
+		if (z->cooling_required != COOL_ME) {
+			continue;
+		}
+
+		rv = temp_sensor_read(i /* temp_sensor_id */, &t_zone);
+		if (rv) {
+			ccprintf("warning! failed to read %s temperature sensor!\n",
+				temp_sensors[i].name);
+			continue;
+		}
+
+		t_zone = K_TO_C(t_zone);
+
+		error = t_zone - z->t_target;
+		error_signal[i][instant] = error;
+
+		pid_debug_print("%d:%d\t", i, error);
+
+		sum_error = 0;
+		for (int j = 0; j < pid_error_history_length; j++)
+			sum_error += error_signal[i][j];
+
+		error_signal_avg[i] = (float)sum_error / (float)pid_error_history_length;
+	}
+
+	pid_debug_print("\n");
+
+	instant++;
+
+	/*
+	 * Reset instant so that next write happens at first location in the
+	 * error_signal array's sensors reading row.
+	 * Note that if the pid_error_history_length setting is modified
+	 * sometime during the run, reset instant if it is greater than the
+	 * newly set pid_error_history_length value.
+	 */
+	if (instant >= pid_error_history_length)
+		instant = 0;
+}
+
 static void cooling_calculator(void)
 {
 	int rv, t_zone;
 	int cool_percent = 0;
 
+	static float error_signal_avg[TEMP_SENSOR_COUNT];
+	static float integral[TEMP_SENSOR_COUNT];
+
 	if (!is_thermal_control_enabled(FAN_CH_0) ||
 		!is_thermal_control_enabled(FAN_CH_1))
 		return;
 
+	update_average_error(error_signal_avg);
+
+	pid_debug_print("avg_err::");
+
 	for (int i = 0; i < TEMP_SENSOR_COUNT; i++) {
 		struct temp_zone *z = &temp_zones[i];
+		float p_component; /* proportional component */
+		float i_component; /* integral component */
+
 		if (z->cooling_required != COOL_ME) {
 			z->cooling_requirement = 0;
 			continue;
 		}
+
+		/* Trick to print a float with single decimal precision */
+		pid_debug_print("%d:%.1d\t", i, (int)(error_signal_avg[i] * 10));
 
 		rv = temp_sensor_read(i /* temp_sensor_id */, &t_zone);
 		if (rv) {
@@ -245,14 +348,41 @@ static void cooling_calculator(void)
 		}
 
 		if (!z->tending_to_critical) {
-			if (z->t_warn - z->t_target != 0) {
-				cool_percent = 100 * (t_zone - z->t_target) / (z->t_warn - z->t_target);
-			} else {
-				ccprintf("warning! t_warn equals t_target for "
-					"zone %d (%s); change them to be not equal\n",
-					i, z->name);
-				cool_percent = 100;
-			}
+			/*
+			 * Reset the integral to zero if we reach very close to
+			 * the setpoint to avoid "over-shoot at zero" error
+			 * where a high integral value will cause us to
+			 * excessively cool even if we have reached the
+			 * setpoint.
+			 * If the error is very high we want P control to work
+			 * rather than I because integral will very quickly
+			 * reach a very high unusable value.
+			 * Note that we do have further limits on the maximum
+			 * value that integral will take but this check/reset
+			 * here helps prevents it.
+			 * In effect we want integral component to play a role
+			 * in an optimal error signal range.
+			 */
+			if (ABS(error_signal_avg[i]) <= pid_allowed_abs_min_error ||
+				ABS(error_signal_avg[i]) >= pid_allowed_abs_max_error)
+				integral[i] = 0;
+			else
+				integral[i] = integral[i] + error_signal_avg[i];
+
+			/*
+			 * Cap the Integral at a maximum to avoid wind-up error
+			 * where the integral keeps on accumulating to a large
+			 * unusable value during normal operation.
+			 */
+			integral[i] = CLAMP(integral[i],
+					-pid_allowed_abs_max_integral,
+					pid_allowed_abs_max_integral);
+
+			/* KP and KI are expressed as percentages; account for that */
+			p_component = error_signal_avg[i] * (float)z->kp / (float)100;
+			i_component = integral[i] * (float)z->ki / (float)100;
+
+			cool_percent = (int)(p_component + i_component);
 		}
 
 		if (cool_percent < 0)
@@ -263,6 +393,8 @@ static void cooling_calculator(void)
 
 		z->cooling_requirement = cool_percent;
 	}
+
+	pid_debug_print("\n");
 }
 DECLARE_HOOK(HOOK_SECOND, cooling_calculator, HOOK_PRIO_TEMP_SENSOR_DONE + 1);
 
@@ -296,24 +428,25 @@ static int get_aggregate_cooling(void)
 				z->cooling_requirement) / total_cooling_weight;
 		}
 	}
+#endif
 
 	if (aggregate_cooling < 0)
 		aggregate_cooling = 0;
 	else if(aggregate_cooling >= 100)
 		aggregate_cooling = 100;
-#endif
+
 	return aggregate_cooling;
 }
 
 static void temp_control(void)
 {
-	int aggregate_cooling = get_aggregate_cooling();
+	int aggregate_cooling;
 
 	if (!is_thermal_control_enabled(FAN_CH_0) ||
 		!is_thermal_control_enabled(FAN_CH_1))
 		return;
 
-	/* ccprintf("Aggregate Cooling: %d %%\n", aggregate_cooling); */
+	aggregate_cooling = get_aggregate_cooling();
 
 	fan_set_percent_needed(FAN_CH_0, aggregate_cooling);
 	fan_set_percent_needed(FAN_CH_1, aggregate_cooling);
@@ -400,10 +533,10 @@ static int command_tempzones(int argc, char **argv)
 		ccprintf("%-10s%s","Crit:",
 			"Dangerous to operate at this temperature;"
 			" initiate device shutdown\n");
-		ccprintf("\n%-5s%-20s%-10s%-10s%-10s%-10s%-10s%-15s%-20s%-20s\n",
+		ccprintf("\n%-5s%-20s%-10s%-10s%-10s%-10s%-10s%-10s%-15s%-15s%-10s%-10s\n",
 			"Zone", "Name", "Current", "Target", "Hyst", "Warn",
-			"Crit", "Is_critical", "Cooling Weight",
-			"Cooling Req (%)");
+			"Crit", "Is_Crit", "Cool_Weight",
+			"Cool_Req (%)", "KP (%)", "KI (%)");
 
 		for (int i = 0; i < ARRAY_SIZE(temp_zones); i++) {
 			struct temp_zone *z = &temp_zones[i];
@@ -421,7 +554,7 @@ static int command_tempzones(int argc, char **argv)
 					"%d (%d%%)",
 					z->cooling_weight,
 					z->cooling_weight * 100 / total_cooling_weight);
-				ccprintf("%-5d%-20s%-10d%-10d%-10d%-10d%-10d%-15s%-20s%-20d\n",
+				ccprintf("%-5d%-20s%-10d%-10d%-10d%-10d%-10d%-10s%-15s%-15d%-10d%-10d\n",
 					i,
 					z->name,
 					K_TO_C(t_zone),
@@ -431,7 +564,9 @@ static int command_tempzones(int argc, char **argv)
 					z->t_crit,
 					z->tending_to_critical ? "yes" : "no",
 					buffer,
-					z->cooling_requirement);
+					z->cooling_requirement,
+					z->kp,
+					z->ki);
 			}
 		}
 
@@ -466,6 +601,10 @@ static int command_tempzones(int argc, char **argv)
 			temp_zones[zone].t_crit = val;
 		else if (!strcasecmp(argv[2], "weight"))
 			temp_zones[zone].cooling_weight = val;
+		else if (!strcasecmp(argv[2], "kp"))
+			temp_zones[zone].kp = val;
+		else if (!strcasecmp(argv[2], "ki"))
+			temp_zones[zone].ki = val;
 		else
 			return EC_ERROR_PARAM2;
 
@@ -476,5 +615,64 @@ static int command_tempzones(int argc, char **argv)
 	return EC_SUCCESS;
 }
 DECLARE_CONSOLE_COMMAND(tempzones, command_tempzones,
-			"{zone} {target|hyst|warn|crit|weight} (value)",
+			"{zone} {target|hyst|warn|crit|weight|kp|ki} (value)",
 			"Get/Set temperature zone metrics.");
+
+static int command_piderr(int argc, char **argv)
+{
+	if (!is_thermal_control_enabled(FAN_CH_0) ||
+		!is_thermal_control_enabled(FAN_CH_1))
+		ccprintf("warning! thermal algorithm is currently disabled!\n");
+
+	if (thermal_shutdown_state)
+		ccprintf("device is in thermal shutdown state\n");
+
+	if (argc == 1) {
+		ccprintf("%s:\t%d \n%s:\t%d \n%s:\t%d\n%s:\t%d\n%s:\t%s\n",
+			"minerror", pid_allowed_abs_min_error,
+			"maxerror", pid_allowed_abs_max_error,
+			"maxintegral", pid_allowed_abs_max_integral,
+			"errorlength", pid_error_history_length,
+			"debug", pid_debug ? "yes" : "no"
+			);
+	} else if (argc == 3) {
+		char *e;
+		int val;
+
+		val = strtoi(argv[2], &e, 0);
+		if (*e)
+			return EC_ERROR_PARAM2;
+
+		if (!strcasecmp(argv[1], "minerror")) {
+			pid_allowed_abs_min_error = val;
+		} else if (!strcasecmp(argv[1], "maxerror")) {
+			pid_allowed_abs_max_error = val;
+		} else if (!strcasecmp(argv[1], "maxintegral")) {
+			pid_allowed_abs_max_integral = val;
+		} else if (!strcasecmp(argv[1], "errorlength")) {
+			if (val < ERR_HISTORY_MIN || val > ERR_HISTORY_MAX) {
+				ccprintf("Invalid errorlength value %d. "
+					"Permitted range: %d-%d\n",
+					val, ERR_HISTORY_MIN, ERR_HISTORY_MAX);
+				return EC_ERROR_INVAL;
+			}
+			pid_error_history_length = val;
+		} else if (!strcasecmp(argv[1], "debug")) {
+			pid_debug = val;
+		} else {
+			return EC_ERROR_PARAM1;
+		}
+	} else {
+		return EC_ERROR_PARAM_COUNT;
+	}
+
+	return EC_SUCCESS;
+}
+DECLARE_CONSOLE_COMMAND(piderr, command_piderr,
+			"{minerror|maxerror|maxintegral|errorlength|debug} (value)",
+			"Get/Set the PID allowed error margins\n"
+			"minerror: min error that contributes to integral and integral is reset to zero when abs(error) <= minerror\n"
+			"maxerror: max error that contributes to integral and integral is reset to zero when abs(error) > maxerror\n"
+			"maxintegral: max allowed integral value, integral value is coerced to {-maxintegral, maxintegral}\n"
+			"errorlength: number of readings used for averaging\n"
+			"debug: show error value debug prints, 0 enable, 1 disable");
