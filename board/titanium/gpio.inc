@@ -13,6 +13,7 @@ GPIO_INT(PS_INIT_L,        PIN(D, 4),  GPIO_INT_BOTH, power_signal_interrupt)
 GPIO_INT(PS_ERR_OUT,       PIN(D, 6),  GPIO_INT_BOTH, power_signal_interrupt)
 GPIO_INT(PS_ERR_STAT,      PIN(D, 7),  GPIO_INT_BOTH, power_signal_interrupt)
 GPIO_INT(BUT_RESET_L,      PIN(D, 9),  GPIO_INT_BOTH, power_signal_interrupt)
+GPIO_INT(PS_SHUTDOWN_L,    PIN(E, 13), GPIO_INT_BOTH | GPIO_PULL_UP, power_signal_interrupt)
 
 
 
@@ -105,7 +106,6 @@ GPIO(M3_BUS_0_ALRT,        PIN(E, 10), GPIO_OUTPUT)
 /* TODO: Should this be an IRQ ?*/
 GPIO(STM_PG_OUT,           PIN(E, 11), GPIO_OUT_LOW)
 GPIO(SCPLD_IN,             PIN(E, 12), GPIO_INPUT)
-GPIO(PS_STM_MIO34,         PIN(E, 13), GPIO_INPUT)
 GPIO(PS_STM_MIO35,         PIN(E, 14), GPIO_INPUT)
 GPIO(PS_SRST_L,            PIN(E, 15), GPIO_OUTPUT)
 
