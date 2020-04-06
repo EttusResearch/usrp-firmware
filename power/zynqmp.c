@@ -99,21 +99,26 @@ static void configure_bootmode(uint8_t mode)
 static int forcing_shutdown;
 static int power_error;
 
+static int should_power_off(void)
+{
+	return forcing_shutdown || power_error;
+}
+
 enum power_state power_handle_state(enum power_state state)
 {
 	switch (state) {
 	case POWER_G3:
 		break;
 	case POWER_S5:
-		if (forcing_shutdown || power_error)
+		if (should_power_off())
 			return POWER_S5G3;
 		return POWER_S5S3;
 	case POWER_S3:
-		if (forcing_shutdown || power_error)
+		if (should_power_off())
 			return POWER_S3S5;
 		return POWER_S3S0;
 	case POWER_S0:
-		if (forcing_shutdown)
+		if (should_power_off())
 			return POWER_S0S3;
 
 		if (!pwrsup_check_supplies(s3s0_ps_seq, ARRAY_SIZE(s3s0_ps_seq))) {
