@@ -33,6 +33,8 @@
 #define CPUTS(outstr) cputs(CC_CHIPSET, outstr)
 #define CPRINTS(format, args...) cprints(CC_CHIPSET, format, ## args)
 
+#define IN_S0_PWR_REQUIRED (POWER_SIGNAL_MASK(PS_PWR_REQUIRED))
+
 /* ZynqMP bootmode; default set in power_chipset_init */
 static uint8_t bootmode;
 
@@ -126,6 +128,12 @@ enum power_state power_handle_state(enum power_state state)
 			return POWER_S0S3;
 		}
 
+		if (!power_has_signals(IN_S0_PWR_REQUIRED)) {
+			/* power no longer needed, shut it down */
+			forcing_shutdown = 1;
+			return POWER_S0S3;
+		}
+
 		return state;
 	case POWER_G3S5:
 		forcing_shutdown = 0;
@@ -174,6 +182,12 @@ enum power_state power_handle_state(enum power_state state)
 
 		if (pwrsup_seq_power_on(dioaux_seq, ARRAY_SIZE(dioaux_seq)))
 			ccprintf("failed to sequence dioaux\n");
+
+		if (power_wait_signals(IN_S0_PWR_REQUIRED)) {
+			ccprintf("power required signal unexpectedly low...");
+			power_error = 1;
+			return POWER_S0S3;
+		}
 
 		set_board_power_status(POWER_GOOD);
 		hook_notify(HOOK_CHIPSET_RESUME);
