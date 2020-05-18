@@ -12,8 +12,8 @@ struct usrp_eeprom_board_info {
 	char serial[8];
 } __attribute__((packed));
 
-#define USRP_EEPROM_CCA_INFO_TAG (0x11)
-struct usrp_eeprom_cca_info {
+#define USRP_EEPROM_MODULE_INFO_TAG (0x11)
+struct usrp_eeprom_module_info {
 	uint16_t pid;
 	uint16_t rev;
 	char serial[8];
@@ -67,11 +67,11 @@ static void __maybe_unused usrp_eeprom_trace(uint8_t tag, uint8_t len, const voi
 		       v->pid, v->rev, v->compat_rev, v->serial);
 	}
 	break;
-	case USRP_EEPROM_CCA_INFO_TAG:
+	case USRP_EEPROM_MODULE_INFO_TAG:
 	{
-		const struct usrp_eeprom_cca_info *v = val;
+		const struct usrp_eeprom_module_info *v = val;
 		assert(sizeof(*v) == len);
-		ccprintf("%s (0x%02x) ", "usrp_eeprom_cca_info", tag);
+		ccprintf("%s (0x%02x) ", "usrp_eeprom_module_info", tag);
 		ccprintf("pid: 0x%04x, rev: 0x%04x, serial: %s\n",
 		       v->pid, v->rev, v->serial);
 	}
