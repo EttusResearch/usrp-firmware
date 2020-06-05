@@ -597,8 +597,6 @@ static int command_tempzones(int argc, char **argv)
 			temp_zones[zone].t_hyst = val;
 		else if (!strcasecmp(argv[2], "warn"))
 			temp_zones[zone].t_warn = val;
-		else if (!strcasecmp(argv[2], "crit"))
-			temp_zones[zone].t_crit = val;
 		else if (!strcasecmp(argv[2], "weight"))
 			temp_zones[zone].cooling_weight = val;
 		else if (!strcasecmp(argv[2], "kp"))
@@ -615,7 +613,7 @@ static int command_tempzones(int argc, char **argv)
 	return EC_SUCCESS;
 }
 DECLARE_CONSOLE_COMMAND(tempzones, command_tempzones,
-			"{zone} {target|hyst|warn|crit|weight|kp|ki} (value)",
+			"{zone} {target|hyst|warn|weight|kp|ki} (value)",
 			"Get/Set temperature zone metrics.");
 
 static int command_piderr(int argc, char **argv)
