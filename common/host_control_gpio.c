@@ -5,12 +5,66 @@
 #include <string.h>
 #include "assert.h"
 
+static int host_control_gpio_get(const struct host_control_gpio *g)
+{
+	int val;
+
+	if (g->get)
+		return g->get(g->signal);
+
+	if (signal_is_gpio(g->signal))
+		return gpio_get_level(g->signal);
+
+	if (signal_is_ioex(g->signal)) {
+		ioex_get_level(g->signal, &val);
+		return val;
+	}
+
+	assert(0);
+	return 0;
+}
+
+static void host_control_gpio_set(const struct host_control_gpio *g, int value)
+{
+	if (g->set)
+		return g->set(g->signal, value);
+	else if (signal_is_gpio(g->signal))
+		gpio_set_level(g->signal, value);
+	else if (signal_is_ioex(g->signal))
+		ioex_set_level(g->signal, value);
+	else
+		assert(0);
+}
+
+static int host_control_gpio_get_flags(const struct host_control_gpio *g)
+{
+	int val;
+
+	if (g->set && g->get)
+		assert(0);
+
+	if (g->set)
+		return GPIO_OUTPUT;
+	if (g->get)
+		return GPIO_INPUT;
+
+	if (signal_is_gpio(g->signal))
+		return gpio_get_default_flags(g->signal);
+
+	if (signal_is_ioex(g->signal)) {
+		ioex_get_flags(g->signal, &val);
+		return val;
+	}
+
+	assert(0);
+	return 0;
+}
+
 static enum ec_status host_gpio_query(struct host_cmd_handler_args *args)
 {
 	const struct ec_params_host_gpio_query *p = args->params;
 	struct ec_response_host_gpio_query *r = args->response;
 	const struct host_control_gpio *gpio;
-	int val;
 
 	if (p->subcmd == EC_HOST_GPIO_GET_COUNT) {
 		r->get_count.val = HOST_CONTROL_GPIO_COUNT;
@@ -27,28 +81,11 @@ static enum ec_status host_gpio_query(struct host_cmd_handler_args *args)
 	case EC_HOST_GPIO_GET_INFO:
 		memcpy(r->get_info.name, gpio->name, sizeof(r->get_info.name));
 		r->get_info.name[sizeof(r->get_info.name) - 1] = 0;
-
-		if (signal_is_gpio(gpio->signal)) {
-			r->get_info.flags = gpio_get_default_flags(gpio->signal);
-		} else if (signal_is_ioex(gpio->signal)) {
-			ioex_get_flags(gpio->signal, &val);
-			r->get_info.flags = val;
-		} else {
-			assert(0);
-		}
-
+		r->get_info.flags = host_control_gpio_get_flags(gpio);
 		args->response_size = sizeof(r->get_info);
 		break;
 	case EC_HOST_GPIO_GET_STATE:
-		if (signal_is_gpio(gpio->signal)) {
-			r->get_state.val = gpio_get_level(gpio->signal);
-		} else if (signal_is_ioex(gpio->signal)) {
-			ioex_get_level(gpio->signal, &val);
-			r->get_state.val = val;
-		} else {
-			assert(0);
-		}
-
+		r->get_state.val = host_control_gpio_get(gpio);
 		args->response_size = sizeof(r->get_info);
 		break;
 	case EC_HOST_GPIO_GET_COUNT:
@@ -71,12 +108,7 @@ static enum ec_status host_gpio_set(struct host_cmd_handler_args *args)
 
 	gpio = &host_control_gpios[p->index];
 
-	if (signal_is_gpio(gpio->signal))
-		gpio_set_level(gpio->signal, p->val);
-	else if (signal_is_ioex(gpio->signal))
-		ioex_set_level(gpio->signal, p->val);
-	else
-		assert(0);
+	host_control_gpio_set(gpio, p->val);
 
 	return EC_SUCCESS;
 }

@@ -4,6 +4,8 @@
 struct host_control_gpio {
 	const char *name;
 	int signal;
+	void (*set)(int, int);
+	int (*get)(int);
 };
 
 extern const struct host_control_gpio host_control_gpios[];
