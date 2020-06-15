@@ -109,8 +109,7 @@ GPIO(SCPLD_IN,             PIN(E, 12), GPIO_INPUT)
 GPIO(PS_STM_MIO35,         PIN(E, 14), GPIO_INPUT)
 GPIO(PS_SRST_L,            PIN(E, 15), GPIO_OUTPUT)
 
-/* TODO: Are these right? */
-GPIO(PS_POR_L,             PIN(H, 0),  GPIO_OUT_LOW)
+GPIO(PS_POR_L,             PIN(H, 0),  GPIO_ODR_LOW)
 GPIO(MGTAUX_EN_MCU,        PIN(H, 1),  GPIO_OUT_LOW)
 
 UNIMPLEMENTED(ENTERING_RW)
