@@ -56,6 +56,7 @@ static const struct pwrsup_seq s3s0_ps_seq[] = {
 };
 
 static const struct pwrsup_seq adcdac_seq[] = {
+	{ POWER_SUPPLY_RFDC,            5 },
 	{ POWER_SUPPLY_ADCVCC,		10 },
 	{ POWER_SUPPLY_ADCVCCAUX,	5 },
 	{ POWER_SUPPLY_DACVCC,		5 },
