@@ -158,6 +158,7 @@ enum host_control_gpios {
 	USER_LED_R,
 	PCIE_LED_G,
 	PCIE_LED_R,
+	RFDC_POWERED,
 
 	HOST_CONTROL_GPIO_COUNT,
 };
