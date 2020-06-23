@@ -12,6 +12,7 @@
 #include "led.h"
 #include "math_util.h"
 #include "mcu_flags.h"
+#include "power.h"
 #include "pwrsup.h"
 #include "printf.h"
 #include "temp_sensor.h"
@@ -162,6 +163,7 @@ DECLARE_DEFERRED(force_thermal_shutdown);
 static int thermal_shutdown_state = 0;
 static void thermal_shutdown(void)
 {
+	int sleep_timer;
 	ccprintf("initiating thermal shutdown!\n");
 
 	/* Initiate orderly power down on PS using MKBP mechanism. */
@@ -173,12 +175,32 @@ static void thermal_shutdown(void)
 	/* Simulate power button release */
 	keyboard_update_button(KEYBOARD_BUTTON_POWER, 0);
 
-	/*
-	 * TODO: Modify to have a mechanism which polls PS shutdown complete
-	 * signal with timeout when it is implemented. Until then bring down
-	 * power rails after a fixed delay.
-	 */
 	hook_call_deferred(&force_thermal_shutdown_data, THERMAL_SHUTDOWN_DELAY);
+
+	/*
+	 * In case, the force_thermal_shutdown() call with the
+	 * THERMAL_SHUTDOWN_DELAY completes execution and the while loop below
+	 * hasn't finished execution we might end up calling
+	 * force_thermal_shutdown() unnecessarily again. Prevent this by polling
+	 * for a lesser timeout value (THERMAL_SHUTDOWN_DELAY - some time)
+	 */
+	sleep_timer = THERMAL_SHUTDOWN_DELAY / 1000 /*ms*/ - 100;
+	while (sleep_timer > 0) {
+		msleep(50);
+		sleep_timer -= 50;
+		/*
+		 * When the orderly shutdown signal is sent to the PS using MKBP;
+		 * it shuts down and then drives the PS_PWR_REQUIRED
+		 * signal low (refer zynqmp.c) which triggers a
+		 * cascade of events leading to the device going into
+		 * G3 state. We monitor that state here to trigger
+		 * other events associated with thermal shutdown.
+		 */
+		if (power_get_state() == POWER_G3) {
+			hook_call_deferred(&force_thermal_shutdown_data, 0);
+			break;
+		}
+	}
 }
 
 static void thermal_shutdown_recovery(void)
