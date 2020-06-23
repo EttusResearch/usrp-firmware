@@ -16,6 +16,7 @@
 #include "printf.h"
 #include "temp_sensor.h"
 #include "timer.h"
+#include "usrp_eeprom.h"
 #include "util.h"
 
 /* #define COOLING_STRATEGY_COOL_MAX */
@@ -70,10 +71,24 @@ BUILD_ASSERT(ARRAY_SIZE(temp_zones) == TEMP_SENSOR_COUNT);
 #define NUM_MB_ZONES TEMP_SENSOR_COUNT - 4 /* 2 per DB */
 #define NUM_DB_ZONES 2
 
+int are_db_temp_sensors_present(int eeprom) {
+	const struct usrp_eeprom_board_info *eep;
+	eep = eeprom_lookup_tag(eeprom, USRP_EEPROM_BOARD_INFO_TAG);
+
+	/* IF Test CCA DB does not have DB temp sensors */
+	if (!eep)
+		return 0;
+	else if (eep->pid == 0x4006 /*IF Test CCA PID*/)
+		return 0;
+
+	return 1;
+}
+
 void init_db_temp_zones(int eeprom, struct temp_zone *zones, int nzones)
 {
-	if (!is_board_present(eeprom)) {
-		ccprintf("warning! db not present or eeprom not initialized!\n");
+	if (!is_board_present(eeprom) || !are_db_temp_sensors_present(eeprom)) {
+		ccprintf("warning! db not present or eeprom not initialized "
+			"or no db temp sensors supported!\n");
 		for (int i = 0; i < nzones; i++)
 			zones[i].cooling_required = COOL_IGNORE_ME;
 	}
