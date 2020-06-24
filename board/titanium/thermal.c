@@ -12,7 +12,6 @@
 #include "led.h"
 #include "math_util.h"
 #include "mcu_flags.h"
-#include "power.h"
 #include "pwrsup.h"
 #include "printf.h"
 #include "temp_sensor.h"
