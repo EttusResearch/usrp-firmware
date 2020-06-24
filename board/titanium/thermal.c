@@ -149,21 +149,36 @@ static void thermal_shutdown_run_fans(void)
 static void force_thermal_shutdown(void)
 {
 	chipset_force_shutdown(CHIPSET_SHUTDOWN_THERMAL);
+}
+DECLARE_DEFERRED(force_thermal_shutdown);
 
+/*
+ * Called on AP S3S5 -> S5 transition.
+ * When this executes we know that the device will power down automatically
+ * as a part of normal shutdown sequence, so cancel the forced shutdown.
+ */
+static void cancel_forced_thermal_shutdown(void)
+{
+	hook_call_deferred(&force_thermal_shutdown_data, -1);
+}
+DECLARE_HOOK(HOOK_CHIPSET_SHUTDOWN, cancel_forced_thermal_shutdown,
+	     HOOK_PRIO_DEFAULT);
+
+static void post_thermal_shutdown(void)
+{
 	/* Set visual indication of thermal shutdown */
 	set_board_power_status(POWER_BAD);
 
 	/* Turn on cooling */
 	thermal_shutdown_run_fans();
 }
-DECLARE_DEFERRED(force_thermal_shutdown);
+DECLARE_DEFERRED(post_thermal_shutdown);
 
 #define THERMAL_SHUTDOWN_DELAY (2 * SECOND)
 
 static int thermal_shutdown_state = 0;
 static void thermal_shutdown(void)
 {
-	int sleep_timer;
 	ccprintf("initiating thermal shutdown!\n");
 
 	/* Initiate orderly power down on PS using MKBP mechanism. */
@@ -177,30 +192,8 @@ static void thermal_shutdown(void)
 
 	hook_call_deferred(&force_thermal_shutdown_data, THERMAL_SHUTDOWN_DELAY);
 
-	/*
-	 * In case, the force_thermal_shutdown() call with the
-	 * THERMAL_SHUTDOWN_DELAY completes execution and the while loop below
-	 * hasn't finished execution we might end up calling
-	 * force_thermal_shutdown() unnecessarily again. Prevent this by polling
-	 * for a lesser timeout value (THERMAL_SHUTDOWN_DELAY - some time)
-	 */
-	sleep_timer = THERMAL_SHUTDOWN_DELAY / 1000 /*ms*/ - 100;
-	while (sleep_timer > 0) {
-		msleep(50);
-		sleep_timer -= 50;
-		/*
-		 * When the orderly shutdown signal is sent to the PS using MKBP;
-		 * it shuts down and then drives the PS_PWR_REQUIRED
-		 * signal low (refer zynqmp.c) which triggers a
-		 * cascade of events leading to the device going into
-		 * G3 state. We monitor that state here to trigger
-		 * other events associated with thermal shutdown.
-		 */
-		if (power_get_state() == POWER_G3) {
-			hook_call_deferred(&force_thermal_shutdown_data, 0);
-			break;
-		}
-	}
+	/* The 100 ms added delay is arbitrary. */
+	hook_call_deferred(&post_thermal_shutdown_data, THERMAL_SHUTDOWN_DELAY + 100 * MSEC);
 }
 
 static void thermal_shutdown_recovery(void)
