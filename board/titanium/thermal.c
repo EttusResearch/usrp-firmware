@@ -48,23 +48,19 @@ struct temp_zone {
 	 */
 };
 
-/*
- * TODO: Start with non-arbitrary values.
- * Choose good defaults based on data from thermal VnV.
- */
 struct temp_zone temp_zones[TEMP_SENSOR_COUNT] = {
-	{"", 50, 85, 90, 100, 0, COOL_ME, 10, 0, 250, 50}, /* PMBUS-0 */
-	{"", 50, 85, 90, 100, 0, COOL_ME, 10, 0, 250, 50}, /* PMBUS-1 */
-	{"", 35, 50, 60, 70, 0, COOL_IGNORE_ME, 10, 0, 400, 50}, /* EC Internal */
-	{"", 25, 40, 45, 50, 0, COOL_IGNORE_ME, 5,  0, 500, 50}, /* TMP464 Internal */
-	{"", 50, 75, 80, 90, 0, COOL_ME, 5,  0, 300, 50}, /* Sample Clock PCB*/
-	{"", 55, 80, 85, 95, 0, COOL_ME, 25, 0, 250, 50}, /* RFSoC */
-	{"", 50, 75, 80, 90, 0, COOL_ME, 5,  0, 300, 50}, /* DRAM PCB */
-	{"", 50, 75, 80, 90, 0, COOL_ME, 10, 0, 300, 50}, /* Power Supply PCB */
-	{"", 50, 80, 85, 100, 0, COOL_ME, 5, 0, 1500, 50}, /* TMP112 DB0 Top */
-	{"", 50, 80, 85, 100, 0, COOL_ME, 5, 0, 1500, 50}, /* TMP112 DB0 Bottom */
-	{"", 50, 80, 85, 100, 0, COOL_ME, 5, 0, 1500, 50}, /* TMP112 DB1 Top */
-	{"", 50, 80, 85, 100, 0, COOL_ME, 5, 0, 1500, 50}, /* TMP112 DB1 Bottom */
+	{"", 95, 110, 113, 116, 0, COOL_ME, 0, 0, 0, 0}, /* PMBUS-0 */
+	{"", 95, 110, 113, 116, 0, COOL_ME, 0, 0, 0, 0}, /* PMBUS-1 */
+	{"", 35, 50, 60, 70, 0, COOL_IGNORE_ME, 0, 0, 0, 0}, /* EC Internal */
+	{"", 25, 40, 45, 50, 0, COOL_IGNORE_ME, 0,  0, 0, 0}, /* TMP464 Internal */
+	{"", 60, 75, 80, 85, 0, COOL_ME, 0,  0, 0, 0}, /* Sample Clock PCB*/
+	{"", 78, 85, 90, 99, 0, COOL_ME, 100, 0, 3000, 10}, /* RFSoC */
+	{"", 48, 75, 80, 85, 0, COOL_ME, 0,  0, 0, 0}, /* DRAM PCB */
+	{"", 80, 85, 90, 95, 0, COOL_ME, 0, 0, 0, 0}, /* Power Supply PCB */
+	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0}, /* TMP112 DB0 Top */
+	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0}, /* TMP112 DB0 Bottom */
+	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0}, /* TMP112 DB1 Top */
+	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0}, /* TMP112 DB1 Bottom */
 };
 BUILD_ASSERT(ARRAY_SIZE(temp_zones) == TEMP_SENSOR_COUNT);
 
@@ -241,11 +237,10 @@ static int all_zones_below_warning(void)
 	return below_warning;
 }
 
-/*TODO: Choose good defaults based on thermal VnV. */
-int pid_allowed_abs_min_error = 1; /* deg C */
+int pid_allowed_abs_min_error = 0; /* deg C */
 int pid_allowed_abs_max_error = 10; /* deg C */
-int pid_allowed_abs_max_integral = 25; /* deg C */
-int pid_error_history_length = 5; /* number of readings used for averaging */
+int pid_allowed_abs_max_integral = 600; /* deg C */
+int pid_error_history_length = 50; /* number of readings used for averaging */
 int pid_debug = 0; /* enable/disable debug prints */
 
 #define ERR_HISTORY_MIN 1 /* at least one reading */
@@ -538,7 +533,7 @@ static int command_tempzones(int argc, char **argv)
 {
 	int t_zone, rv, total_cooling_weight;
 	char *e;
-	char buffer[10];
+	char buffer[15];
 
 	if (!is_thermal_control_enabled(FAN_CH_0) ||
 		!is_thermal_control_enabled(FAN_CH_1))
