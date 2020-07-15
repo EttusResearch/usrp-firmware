@@ -50,6 +50,12 @@ struct usrp_eeprom_fan_limits {
 	uint16_t max;
 } __attribute__((packed));
 
+#define USRP_EEPROM_FAN_FIXED_CAPACITY (0x22)
+struct usrp_eeprom_fan_fixed_capacity {
+	uint8_t capacity;
+	uint8_t reserved; /* for natural alignment */
+} __attribute__((packed));
+
 //#include <stdio.h>
 #include <assert.h>
 
@@ -114,6 +120,14 @@ static void __maybe_unused usrp_eeprom_trace(uint8_t tag, uint8_t len, const voi
 		const struct usrp_eeprom_fan_limits *v = val;
 		ccprintf("%s (0x%02x) ", "usrp_eeprom_fan_limits", tag);
 		ccprintf("min: %d, start: %d, max: %d", v->min, v->start, v->max);
+		ccprintf("\n");
+	}
+	break;
+	case USRP_EEPROM_FAN_FIXED_CAPACITY:
+	{
+		const struct usrp_eeprom_fan_fixed_capacity *v = val;
+		ccprintf("%s (0x%02x) ", "usrp_eeprom_fan_fixed_capacity", tag);
+		ccprintf("%d", v->capacity);
 		ccprintf("\n");
 	}
 	break;

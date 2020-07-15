@@ -105,6 +105,61 @@ static void init_temp_zones(void)
 }
 DECLARE_HOOK(HOOK_INIT, init_temp_zones, HOOK_PRIO_DEFAULT);
 
+static void run_fans_manually(uint8_t capacity)
+{
+	int fixed_rpm = fan_percent_to_rpm(0, capacity);
+
+	/* Configure fans to run in rpm mode at fixed cooling capacity. */
+	for (uint8_t fan = 0; fan < FAN_CH_COUNT; fan++) {
+		fan_set_rpm_mode(FAN_CH(fan), 1);
+		fan_set_enabled(FAN_CH(fan), 1);
+		gpio_set_level(fans[fan].conf->enable_gpio, 1);
+		fan_set_rpm_target(FAN_CH(fan), fixed_rpm);
+	}
+}
+
+static void init_fixed_cooling(void)
+{
+	const struct usrp_eeprom_fan_fixed_capacity *eep;
+	eep = eeprom_lookup_tag(TLV_EEPROM_MB, USRP_EEPROM_FAN_FIXED_CAPACITY);
+
+	if (!eep) {
+		return;
+	} else if (eep->capacity > 100) {
+		ccprintf("warning! invalid fan fixed capacity value in eeprom."
+			" Valid range is 0-100.\n");
+		return;
+	}
+
+	ccprintf("Fixed Fan capacity read from eeprom. "
+		"Disabling thermal control algorithm! "
+		"Running fans at fixed %d%% capacity.\n", eep->capacity);
+	for (uint8_t fan = 0; fan < FAN_CH_COUNT; fan++)
+		set_thermal_control_enabled(fan, 0);
+
+	run_fans_manually(eep->capacity);
+}
+/*
+ * HOOK_CHIPSET_RESUME:
+ * Ensure execution after power rails have been brought up and
+ * after pwm_fan_start() (refer common/fan.c) which sets the
+ * thermal_control_enabled state in order to overwrite what it sets.
+ *
+ * HOOK_INIT:
+ * Typically, thermal control is in enabled state which sets the fans in
+ * rpm mode (refer pwm_fan_init() in common/fan.c) and fans are able to retain
+ * their state after a SYSJUMP but here we disable
+ * thermal control on boot so the fan state gets reset to manual mode on a
+ * SYSJUMP. Tying this function to HOOK_INIT ensures that the fan mode gets set
+ * to rpm mode and fans continue to operate at fixed cooling after a SYSJUMP.
+ * Ideally we can avoid this roundabout method by actually preserving the
+ * fan mode in pwm_fan_preserve_state() and then restoring the state in
+ * pwm_fan_init() but that would need modifcation to the pwm_fan_state struct
+ * which is not advised.
+ */
+DECLARE_HOOK(HOOK_CHIPSET_RESUME, init_fixed_cooling, HOOK_PRIO_DEFAULT + 1);
+DECLARE_HOOK(HOOK_INIT, init_fixed_cooling, HOOK_PRIO_DEFAULT);
+
 static int get_total_cooling_weight(void)
 {
 	int total_cooling_weight = 0;
@@ -132,13 +187,7 @@ static void thermal_shutdown_run_fans(void)
 		return;
 	}
 
-	/* Configure fans to run in manual mode at fixed duty cycle. */
-	for (uint8_t fan = 0; fan < FAN_CH_COUNT; fan++) {
-		fan_set_rpm_mode(FAN_CH(fan), 0);
-		fan_set_enabled(FAN_CH(fan), 1);
-		gpio_set_level(fans[fan].conf->enable_gpio, 1);
-		fan_set_duty(FAN_CH(fan), FAN_THERMAL_SHUTDOWN_DUTY);
-	}
+	run_fans_manually(FAN_THERMAL_SHUTDOWN_DUTY);
 }
 
 static void force_thermal_shutdown(void)
