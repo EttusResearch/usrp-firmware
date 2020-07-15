@@ -110,7 +110,7 @@ static void set_enabled(int fan, int enable)
 		gpio_set_level(fans[fan].conf->enable_gpio, enable);
 }
 
-test_export_static void set_thermal_control_enabled(int fan, int enable)
+void set_thermal_control_enabled(int fan, int enable)
 {
 	thermal_control_enabled[fan] = enable;
 
