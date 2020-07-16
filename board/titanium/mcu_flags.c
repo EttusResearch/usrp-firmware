@@ -25,7 +25,7 @@ static int mcu_flags_present(void)
 
 uint8_t mcu_flags_get_bootmode(void)
 {
-	uint8_t bootmode = zynqmp_str_to_bootmode("sd1ls");
+	uint8_t bootmode = zynqmp_str_to_bootmode("emmc");
 	if (mcu_flags_present())
 		bootmode = MCU_FLAGS_BOOTMODE(mcu_flags);
 
