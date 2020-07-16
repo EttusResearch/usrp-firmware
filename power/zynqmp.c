@@ -25,6 +25,7 @@
 #include "util.h"
 #include "pwrsup.h"
 #include "mcu_flags.h"
+#include "zynqmp.h"
 
 /* Long power key press to force shutdown in S0 */
 #define FORCED_SHUTDOWN_DELAY  (8 * SECOND)
@@ -298,7 +299,7 @@ static const char *bootmodes[] = {
 	[0b1110] = "sd1ls",
 };
 
-static int str_to_bootmode(const char *boot_mode)
+int zynqmp_str_to_bootmode(const char *boot_mode)
 {
 	int i;
 
@@ -309,7 +310,7 @@ static int str_to_bootmode(const char *boot_mode)
 	return -1;
 }
 
-static const char *bootmode_to_str(int bm)
+const char *zynqmp_bootmode_to_str(int bm)
 {
 	const char *str = NULL;
 
@@ -340,7 +341,7 @@ static int command_zynqmp(int argc, char **argv)
 		zynqmp_s0_srst();
 	} else if (!strcasecmp(argv[1], "bootmode")) {
 		if (argc > 2) {
-			if (str_to_bootmode(argv[2]) < 0) {
+			if (zynqmp_str_to_bootmode(argv[2]) < 0) {
 				ccprintf("valid bootmodes: ");
 				for (int i = 0; i < ARRAY_SIZE(bootmodes); i++)
 					ccprintf("%s ", bootmodes[i] ?: "\b");
@@ -348,9 +349,9 @@ static int command_zynqmp(int argc, char **argv)
 				return EC_ERROR_PARAM2;
 			}
 			ccprintf("ZynqMP: Setting 'bootmode' to '%s'\n", argv[2]);
-			bootmode = str_to_bootmode(argv[2]);
+			bootmode = zynqmp_str_to_bootmode(argv[2]);
 		} else {
-			ccprintf("ZynqMP: 'bootmode' is '%s'\n", bootmode_to_str(bootmode));
+			ccprintf("ZynqMP: 'bootmode' is '%s'\n", zynqmp_bootmode_to_str(bootmode));
 		}
 	} else {
 		return EC_ERROR_PARAM1;
