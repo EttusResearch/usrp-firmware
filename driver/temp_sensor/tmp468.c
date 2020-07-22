@@ -12,6 +12,7 @@
 #include "i2c.h"
 #include "hooks.h"
 #include "util.h"
+#include "math_util.h"
 
 #include "tmp468.h"
 
@@ -89,6 +90,8 @@ static void temp_sensor_poll(void)
 			ret = raw_read16(TMP468_LOCAL + i, &temp_val[i]);
 			if (ret < 0)
 				return;
+
+			temp_val[i] = sign_extend(temp_val[i], 16);
 			temp_val[i] >>= TMP468_SHIFT1;
 		}
 }
