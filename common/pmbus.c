@@ -9,6 +9,7 @@
 #include "util.h"
 #include "i2c.h"
 #include "pmbus.h"
+#include "math_util.h"
 
 enum pmbus_command {
 	PMBUS_CMD_WRITE_PROTECT = 0x10,
@@ -171,7 +172,7 @@ int pmbus_read_temp(enum pmbus_id id, int *data)
 	if (ret)
 		return ret;
 
-	*data = v;
+	*data = sign_extend(v, 11);;
 
 	return 0;
 }
