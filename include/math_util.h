@@ -215,4 +215,19 @@ void rotate_inv(const intv3_t v, const mat33_fp_t R, intv3_t res);
  */
 int round_divide(int64_t dividend, int divisor);
 
+/**
+ * Sign-extend a number of variable bit-width to an integer
+ * Adapted from https://graphics.stanford.edu/~seander/bithacks.html
+ *
+ * @param x Number to sign-extend
+ * @param width Bit-width of the number
+ *
+ * @return Sign-extended result
+ */
+static inline int sign_extend(int x, uint8_t width)
+{
+	int m = 8 * sizeof(x) - width;
+	return (x << m) >> m;
+}
+
 #endif /* __CROS_EC_MATH_UTIL_H */
