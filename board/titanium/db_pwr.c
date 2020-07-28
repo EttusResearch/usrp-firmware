@@ -11,6 +11,7 @@
 #include "usrp_eeprom.h"
 #include "pwrsup.h"
 #include "assert.h"
+#include "db_pwr.h"
 
 #define DB_SUPPLY_1V8   (0)
 #define DB_SUPPLY_2V5   (1)
@@ -179,6 +180,29 @@ void db_pwr_init(void)
 	db_pwr_seq_read(TLV_EEPROM_DB1, &db1_pwr, &db1_seq);
 }
 DECLARE_HOOK(HOOK_INIT, db_pwr_init, HOOK_PRIO_DEFAULT + 2);
+
+void db_pwr_ctrl(int which, int state)
+{
+	const struct db_pwr_seq *seq;
+	struct db_pwr *db;
+
+	db = which ? &db1_pwr : &db0_pwr;
+	seq = which ? &db1_seq : &db0_seq;
+
+	if (state)
+		db_poweron(db, seq);
+	else
+		db_poweroff(db, seq);
+}
+
+int db_pwr_stat(int which)
+{
+	struct db_pwr *db;
+
+	db = which ? &db1_pwr : &db0_pwr;
+
+	return db->state == DB_PWR_STATE_ON;
+}
 
 static int command_dbpwr(int argc, char **argv)
 {
