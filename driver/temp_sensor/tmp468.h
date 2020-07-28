@@ -10,6 +10,7 @@
 
 #define TMP468_I2C_ADDR_FLAGS (0x48 | I2C_FLAG_BIG_ENDIAN)
 #define TMP468_SHIFT1 7
+#define TMP468_SHIFT2 8
 
 #define TMP468_LOCAL			0x00
 #define TMP468_REMOTE1			0x01
@@ -30,12 +31,12 @@
 #define TMP468_THERM_HYST		0x38
 
 #define TMP468_LOCAL_LOW_LIMIT		0x39
-#define TMP468_LOCAL_HIGH_LIMT		0x3a
+#define TMP468_LOCAL_HIGH_LIMIT		0x3a
 
 #define TMP468_REMOTE1_OFFSET		0x40
 #define TMP468_REMOTE1_NFACTOR		0x41
-#define TMP468_REMOTE1_LOW_LIMIT	0x41
-#define TMP468_REMOTE1_HIGH_LIMIT	0x42
+#define TMP468_REMOTE1_LOW_LIMIT	0x42
+#define TMP468_REMOTE1_HIGH_LIMIT	0x43
 
 #define TMP468_REMOTE2_OFFSET		0x48
 #define TMP468_REMOTE2_NFACTOR		0x49
@@ -49,8 +50,8 @@
 
 #define TMP468_REMOTE4_OFFSET		0x58
 #define TMP468_REMOTE4_NFACTOR		0x59
-#define TMP468_REMOTE4_LOW_LIMIT	0x59
-#define TMP468_REMOTE4_HIGH_LIMIT	0x5a
+#define TMP468_REMOTE4_LOW_LIMIT	0x5a
+#define TMP468_REMOTE4_HIGH_LIMIT	0x5b
 
 #define TMP468_REMOTE5_OFFSET		0x60
 #define TMP468_REMOTE5_NFACTOR		0x61
@@ -122,5 +123,26 @@ int tmp468_get_val(int idx, int *temp_ptr);
  * @return EC_SUCCESS if successful, non-zero if error.
  */
 int tmp468_set_power(enum tmp468_power_state power_on);
+
+/**
+ * Set temperature offset for the specified remote channel
+ *
+ * @param idx		Channel Index to write to.
+ * @param offset	Offset to be set in deg C, will get added to calculated
+ *               	temperature for specified channel.
+ *
+ * @return EC_SUCCESS if successful, non-zero if error.
+ */
+int tmp468_set_offset(int idx, int8_t offset);
+
+/**
+ * Set n-factor correction for the specified remote channel
+ *
+ * @param idx		Channel Index to write to.
+ * @param offset	NFACTOR correction to be set.
+ *
+ * @return EC_SUCCESS if successful, non-zero if error.
+ */
+int tmp468_set_nfactor(int idx, int8_t nfactor);
 
 #endif /* __CROS_EC_TMP468_H */
