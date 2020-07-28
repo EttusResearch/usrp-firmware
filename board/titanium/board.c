@@ -27,6 +27,7 @@
 #include "gpio_list.h"
 #include "host_control_gpio.h"
 #include "fan.h"
+#include "db_pwr.h"
 
 static int led_state;
 static void board_second(void)
@@ -56,6 +57,10 @@ const struct host_control_gpio host_control_gpios[] = {
 	[PCIE_LED_G] = { .name = "PCIE_LED_G_L", .signal = IOEX_PWRDB_LED0G_L },
 	[PCIE_LED_R] = { .name = "PCIE_LED_R_L", .signal = IOEX_PWRDB_LED0R_L },
 	[RFDC_POWERED] = { .name = "RFDC_POWERED", .signal = GPIO_SCPLD_IN },
+	[DB0_PWR_EN] = { .name = "DB0_PWR_EN", .signal = 0, .set = db_pwr_ctrl },
+	[DB0_PWR_STATUS] = { .name = "DB0_PWR_STATUS", .signal = 0, .get = db_pwr_stat },
+	[DB1_PWR_EN] = { .name = "DB1_PWR_EN", .signal = 1, .set = db_pwr_ctrl },
+	[DB1_PWR_STATUS] = { .name = "DB1_PWR_STATUS", .signal = 1, .get = db_pwr_stat },
 };
 BUILD_ASSERT(ARRAY_SIZE(host_control_gpios) == HOST_CONTROL_GPIO_COUNT);
 #endif
