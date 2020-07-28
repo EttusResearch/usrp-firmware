@@ -172,8 +172,7 @@ BUILD_ASSERT(ARRAY_SIZE(pwm_channels) == PWM_CH_COUNT);
 #include "tca64xx.h"
 static void board_init(void)
 {
-	/* No power control yet */
-
+	gpio_enable_interrupt(GPIO_DB_PWR_INT);
 }
 DECLARE_HOOK(HOOK_INIT, board_init, HOOK_PRIO_DEFAULT);
 
