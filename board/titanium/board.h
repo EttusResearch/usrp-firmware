@@ -109,6 +109,8 @@
 #define TMP112_COUNT 4
 #define CONFIG_STM32_INTERNAL_TEMP
 #define CONFIG_ADC_SAMPLE_TIME 7
+/* TODO: Remove this in release as it allows for sensor reading tampering */
+#define CONFIG_CMD_TMP468
 
 #define CONFIG_IO_EXPANDER_TCA64XX
 #define CONFIG_IO_EXPANDER

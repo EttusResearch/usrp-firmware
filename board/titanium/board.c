@@ -253,6 +253,29 @@ const struct temp_sensor_t temp_sensors[] = {
 	{"TMP112 DB1 Bottom", TEMP_SENSOR_TYPE_BOARD, tmp112_get_val, 3},
 };
 BUILD_ASSERT(ARRAY_SIZE(temp_sensors) == TEMP_SENSOR_COUNT);
+
+static void tmp468_sensor_init(void)
+{
+	int ret;
+
+	/*
+	 * Refer TMP468 datasheet and Xilinx DS926 document
+	 * https://www.xilinx.com/support/documentation/data_sheets/ds926-zynq-ultrascale-plus-rfsoc.pdf
+	 * The DS926 mentions that the ideality factor (n-factor) for the
+	 * temperature diode inside the RFSoC is 1.026.
+	 * Use the formula from the TMP468 datasheet to convert this number to
+	 * the value to be written to n-factor correction register.
+	 */
+	ret = tmp468_set_nfactor(2 /* RFSoC */, -37 /* NFACTOR CORRECTION */);
+
+	ret |= tmp468_set_offset(2 /* RFSoC */, -1 /* deg C */);
+
+	if (ret != EC_SUCCESS)
+		ccprintf("warning! TMP468 init failed!"
+			"Temp values may not be accurate!\n");
+
+}
+DECLARE_HOOK(HOOK_INIT, tmp468_sensor_init, HOOK_PRIO_TEMP_SENSOR);
 #endif
 
 #ifdef CONFIG_IO_EXPANDER
