@@ -10,10 +10,34 @@
 #include "task.h"
 #include "hooks.h"
 
-static struct {
+/*
+ * states and transitions:
+ *     OFF -> TURNING_ON            (power_on)
+ *     TURNING_ON -> ON             (power good)
+ *     TURNING_ON -> PG_TIMEOUT     (power good timeout)
+ *     TURNING_ON -> TURN_ON_FAILED (failed to control supply)
+ *     ON -> FAULT                  (!power good)
+ *     FAULT -> TURNING_ON          (power_on)
+ *     PG_TIMEOUT -> TURNING_ON     (power_on)
+ *     TURN_ON_FAILED -> TURNING_ON (power_on)
+ *     * -> OFF                     (power_off)
+ */
+enum pwrsup_state {
+	PWRSUP_STATE_OFF,
+	PWRSUP_STATE_TURNING_ON,
+	PWRSUP_STATE_ON,
+	PWRSUP_STATE_FAULT,
+	PWRSUP_STATE_TURN_ON_FAILED,
+	PWRSUP_STATE_PG_TIMEOUT,
+};
+
+struct pwrsup_priv {
+	uint8_t state; /* enum pwrsup_state */
 	uint8_t fault;
-	int last_voltage;
-} fault_state[POWER_SUPPLY_COUNT];
+	int16_t last_voltage;
+};
+
+static struct pwrsup_priv supply_state[POWER_SUPPLY_COUNT];
 
 static int pwrsup_powered_on(enum pwrsup_id ps)
 {
@@ -34,10 +58,11 @@ static int pwrsup_powered_on(enum pwrsup_id ps)
 static int pwrsup_control(enum pwrsup_id ps, int state)
 {
 	const struct pwrsup_info *sup = power_supply_list + ps;
+	struct pwrsup_priv *priv = supply_state + ps;
 
 	if (state) {
-		fault_state[ps].fault = 0;
-		fault_state[ps].last_voltage = 0;
+		priv->fault = 0;
+		priv->last_voltage = 0;
 	}
 
 	if (sup->flag_enable_inverted)
@@ -118,25 +143,37 @@ enum pwrsup_status pwrsup_get_status(enum pwrsup_id ps)
 	return PWRSUP_STATUS_ON;
 }
 
-static const char *pwrsup_get_status_str(enum pwrsup_id ps)
+static const char *pwrsup_get_state_str(enum pwrsup_id ps)
 {
-	switch (pwrsup_get_status(ps)) {
-	case PWRSUP_STATUS_OFF: return "off";
-	case PWRSUP_STATUS_ON:  return "on";
-	case PWRSUP_STATUS_FAULT: return "fault";
+	switch (supply_state[ps].state) {
+	case PWRSUP_STATE_OFF: return "off";
+	case PWRSUP_STATE_TURNING_ON: return "turning on";
+	case PWRSUP_STATE_ON: return "on";
+	case PWRSUP_STATE_FAULT: return "fault";
+	case PWRSUP_STATE_TURN_ON_FAILED: return "turn on failed";
+	case PWRSUP_STATE_PG_TIMEOUT: return "timeout";
 	}
+
 	return "??";
 }
 
 int pwrsup_power_on(enum pwrsup_id ps, int delay, int timeout)
 {
 	const struct pwrsup_info *sup = power_supply_list + ps;
+	struct pwrsup_priv *priv = supply_state + ps;
 	const int timeout_in = timeout;
 	int rv;
 
+	if (priv->state == PWRSUP_STATE_ON)
+		return 0;
+
+	priv->state = PWRSUP_STATE_TURNING_ON;
+
 	rv = pwrsup_control(ps, 1);
-	if (rv)
+	if (rv) {
+		priv->state = PWRSUP_STATE_TURN_ON_FAILED;
 		return rv;
+	}
 
 	if (delay)
 		msleep(delay);
@@ -153,8 +190,11 @@ int pwrsup_power_on(enum pwrsup_id ps, int delay, int timeout)
 		if (sup->flag_mon_adc)
 			ccprintf("min voltage: %u mV, cur voltage: %u\n",
 				 sup->level, pwrsup_get_voltage(ps));
+		priv->state = PWRSUP_STATE_PG_TIMEOUT;
 		return -1;
 	}
+
+	priv->state = PWRSUP_STATE_ON;
 
 	if (0) /* helpful for profiling */
 		ccprintf("supply %s came up in %d ms (timeout: %d ms, delay: %d ms)\n",
@@ -165,6 +205,10 @@ int pwrsup_power_on(enum pwrsup_id ps, int delay, int timeout)
 
 int pwrsup_power_off(enum pwrsup_id ps)
 {
+	struct pwrsup_priv *priv = supply_state + ps;
+
+	priv->state = PWRSUP_STATE_OFF;
+
 	return pwrsup_control(ps, 0);
 }
 
@@ -272,7 +316,7 @@ static int command_pwrsup(int argc, char **argv)
 			for (int j = 0; j < 20 - (strlen(sup->name) + 2 * depth); j++)
 				ccprintf(" ");
 
-			ccprintf("%-10s", pwrsup_get_status_str(ps));
+			ccprintf("%-10s", pwrsup_get_state_str(ps));
 
 			buf[0] = 0;
 			level = pwrsup_get_voltage(ps);
@@ -302,19 +346,25 @@ DECLARE_CONSOLE_COMMAND(pwrsup, command_pwrsup, "", "show power supplies");
 
 static void pwrsup_deferred(void)
 {
+	struct pwrsup_priv *priv;
 	enum pwrsup_status status;
 
 	for (int i = 0; i < POWER_SUPPLY_COUNT; i++) {
+		priv = supply_state + i;
+
+		/* only check rails that are on */
+		if (priv->state != PWRSUP_STATE_ON)
+			continue;
+
 		status = pwrsup_get_status(i);
 		if (status == PWRSUP_STATUS_FAULT) {
-			if (!fault_state[i].fault) {
-				fault_state[i].fault = 1;
-				fault_state[i].last_voltage = pwrsup_get_voltage(i);
-				ccprintf("pwrsup: %s fault! disabling...\n", pwrsup_get_name(i));
-				if (fault_state[i].last_voltage != -1)
-					ccprintf("  voltage: %d\n", fault_state[i].last_voltage);
-				pwrsup_control(i, 0);
-			}
+			priv->state = PWRSUP_STATE_FAULT;
+			priv->last_voltage = pwrsup_get_voltage(i);
+			ccprintf("pwrsup: %s fault! disabling...\n",
+				 pwrsup_get_name(i));
+			if (priv->last_voltage != -1)
+				ccprintf("  voltage: %d\n", priv->last_voltage);
+			pwrsup_control(i, 0);
 		}
 	}
 
