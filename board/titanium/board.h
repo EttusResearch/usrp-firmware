@@ -255,7 +255,6 @@ enum power_signal {
 	PS_INIT_L,
 	PS_PWR_GOOD,
 	PS_ERR_STAT,
-	BUT_RESET_L,
 	PS_PWR_REQUIRED,
 	/* Number of power signals */
 	POWER_SIGNAL_COUNT
