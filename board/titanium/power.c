@@ -287,7 +287,7 @@ void power_signal_changed(void)
 	int is_jumped = system_jumped_to_this_image();
 	if (is_jumped == 0) {
 		int v;
-		v = gpio_get_level(GPIO_BUT_RESET_L);
+		v = gpio_get_level(GPIO_RESET_BUTTON_L);
 
 		if (v)
 			set_board_power_status(POWER_INPUT_GOOD);

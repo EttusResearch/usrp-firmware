@@ -12,7 +12,7 @@ GPIO_INT(PS_DONE,          PIN(C, 13), GPIO_INT_BOTH, power_signal_interrupt)
 GPIO_INT(PS_INIT_L,        PIN(D, 4),  GPIO_INT_BOTH, power_signal_interrupt)
 GPIO_INT(PS_ERR_OUT,       PIN(D, 6),  GPIO_INT_BOTH, power_signal_interrupt)
 GPIO_INT(PS_ERR_STAT,      PIN(D, 7),  GPIO_INT_BOTH, power_signal_interrupt)
-GPIO_INT(BUT_RESET_L,      PIN(D, 9),  GPIO_INT_BOTH, power_signal_interrupt)
+GPIO_INT(RESET_BUTTON_L,   PIN(D, 9),  GPIO_INT_BOTH, reset_button_interrupt)
 GPIO_INT(PS_SHUTDOWN_L,    PIN(E, 13), GPIO_INT_BOTH | GPIO_PULL_UP, power_signal_interrupt)
 GPIO_INT(DB_PWR_INT,       PIN(C, 14), GPIO_INT_FALLING, pwrsup_interrupt)
 

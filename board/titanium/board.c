@@ -23,6 +23,7 @@
 #include "util.h"
 #include "power.h"
 #include "power_button.h"
+#include "reset_button.h"
 #include "pmbus.h"
 #include "gpio_list.h"
 #include "host_control_gpio.h"
