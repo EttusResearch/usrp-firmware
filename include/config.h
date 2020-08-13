@@ -2944,6 +2944,9 @@
 /* Timeout before power button task gives up starting system */
 #define CONFIG_POWER_BUTTON_INIT_TIMEOUT	1
 
+/* Compile common code to support reset triggered by a button */
+#undef CONFIG_RESET_BUTTON
+
 /*
  * Enable delay between DSW_PWROK and PWRBTN assertion.
  * If enabled, DSW_PWROK_TO_PWRBTN_US and get_time_dsw_pwrok must be defined
