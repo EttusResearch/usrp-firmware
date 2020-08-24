@@ -49,14 +49,14 @@ struct temp_zone {
 };
 
 struct temp_zone temp_zones[TEMP_SENSOR_COUNT] = {
-	{"", 95, 110, 113, 116, 0, COOL_ME, 0, 0, 0, 0}, /* PMBUS-0 */
-	{"", 95, 110, 113, 116, 0, COOL_ME, 0, 0, 0, 0}, /* PMBUS-1 */
+	{"", 95, 115, 120, 130, 0, COOL_ME, 0, 0, 0, 0}, /* PMBUS-0 */
+	{"", 95, 115, 120, 130, 0, COOL_ME, 0, 0, 0, 0}, /* PMBUS-1 */
 	{"", 35, 50, 60, 70, 0, COOL_IGNORE_ME, 0, 0, 0, 0}, /* EC Internal */
 	{"", 25, 40, 45, 50, 0, COOL_IGNORE_ME, 0,  0, 0, 0}, /* TMP464 Internal */
 	{"", 60, 75, 80, 85, 0, COOL_ME, 0,  0, 0, 0}, /* Sample Clock PCB*/
-	{"", 78, 85, 90, 99, 0, COOL_ME, 100, 0, 3000, 10}, /* RFSoC */
-	{"", 48, 75, 80, 85, 0, COOL_ME, 0,  0, 0, 0}, /* DRAM PCB */
-	{"", 80, 85, 90, 95, 0, COOL_ME, 0, 0, 0, 0}, /* Power Supply PCB */
+	{"", 78, 85, 95, 99, 0, COOL_ME, 0, 0, 0, 0}, /* RFSoC */
+	{"", 44, 75, 80, 85, 0, COOL_ME, 100,  0, 2700, 8}, /* DRAM PCB */
+	{"", 80, 90, 95, 105, 0, COOL_ME, 0, 0, 0, 0}, /* Power Supply PCB */
 	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0}, /* TMP112 DB0 Top */
 	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0}, /* TMP112 DB0 Bottom */
 	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0}, /* TMP112 DB1 Top */
@@ -288,7 +288,7 @@ static int all_zones_below_warning(void)
 
 int pid_allowed_abs_min_error = 0; /* deg C */
 int pid_allowed_abs_max_error = 10; /* deg C */
-int pid_allowed_abs_max_integral = 600; /* deg C */
+int pid_allowed_abs_max_integral = 750; /* deg C */
 int pid_error_history_length = 50; /* number of readings used for averaging */
 int pid_debug = 0; /* enable/disable debug prints */
 
