@@ -114,8 +114,8 @@ void fans_configure(void)
 	 *
 	 * Note that, plugging into the dt formula above:
 	 *
-	 * At max possible RPM (12400); dt = 15483 and
-	 * at max possible RPM (3800);  dt = 50526 approximately.
+	 * At max possible RPM (16000); dt = 12000 and
+	 * at min possible RPM (3800);  dt = 50526 approximately.
 	 *
 	 * which is well within the ARR value of 65535 chosen earlier.
 	 *
