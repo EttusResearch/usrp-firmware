@@ -34,7 +34,7 @@ static volatile int power_button_is_stable = 1;
 static const struct button_config power_button = {
 	.name = "power button",
 	.gpio = GPIO_POWER_BUTTON_L,
-	.debounce_us = BUTTON_DEBOUNCE_US,
+	.debounce_us = CONFIG_POWER_BUTTON_DEBOUNCE_US,
 	.flags = CONFIG_POWER_BUTTON_FLAGS,
 };
 

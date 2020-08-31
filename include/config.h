@@ -2929,6 +2929,9 @@
 /* Configure power button. e.g. BUTTON_FLAG_ACTIVE_HIGH */
 #undef CONFIG_POWER_BUTTON_FLAGS
 
+/* Configure power button debounce time */
+#define CONFIG_POWER_BUTTON_DEBOUNCE_US (30 * MSEC)
+
 /* Allow the power button to send events while the lid is closed */
 #undef CONFIG_POWER_BUTTON_IGNORE_LID
 
