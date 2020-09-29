@@ -72,7 +72,7 @@ GPIO(ADC_VCCAUX_EN,        PIN(C, 11), GPIO_OUT_LOW)
 GPIO(3V3_CLK_EN,           PIN(C, 12), GPIO_OUT_LOW)
 /* This should be an IRQ? */
 //GPIO(PS_DONE,              PIN(C, 13), GPIO_INPUT)//
-/* PC14 and PC15 are OSC in/out */
+GPIO(JTAG_EN,              PIN(C, 15), GPIO_OUT_LOW)
 
 GPIO(PS_MODE_3,            PIN(D, 0),  GPIO_OUTPUT)
 GPIO(PS_MODE_1,            PIN(D, 1),  GPIO_OUTPUT)

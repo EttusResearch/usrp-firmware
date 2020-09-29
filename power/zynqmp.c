@@ -173,6 +173,7 @@ enum power_state power_handle_state(enum power_state state)
 			return POWER_S0S3;
 		}
 
+		gpio_set_level(GPIO_JTAG_EN, 1);
 		gpio_set_level(GPIO_PS_POR_L, 1);
 		gpio_set_level(GPIO_PS_SRST_L, 1);
 
@@ -201,6 +202,7 @@ enum power_state power_handle_state(enum power_state state)
 		pwrsup_seq_power_off(adcdac_seq, ARRAY_SIZE(adcdac_seq));
 		pwrsup_seq_power_off(dioaux_seq, ARRAY_SIZE(dioaux_seq));
 		pwrsup_seq_power_off(clkaux_seq, ARRAY_SIZE(clkaux_seq));
+		gpio_set_level(GPIO_JTAG_EN, 0);
 
 		pwrsup_seq_power_off(s3s0_ps_seq, ARRAY_SIZE(s3s0_ps_seq));
 		set_board_power_status(power_error ? POWER_BAD : POWER_INPUT_GOOD);
