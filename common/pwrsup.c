@@ -376,3 +376,24 @@ int pwrsup_check_supplies(const struct pwrsup_seq *seq, int op_count)
 
 	return okay;
 }
+
+static void pwrsup_init(void)
+{
+	/*
+	 * Initialize state based on live supply status.
+	 */
+
+	for (int i = 0; i < POWER_SUPPLY_COUNT; i++)
+		switch (pwrsup_get_status(i)) {
+		case PWRSUP_STATUS_ON:
+			supply_state[i] = PWRSUP_STATE_ON;
+			break;
+		case PWRSUP_STATUS_OFF:
+			supply_state[i] = PWRSUP_STATE_OFF;
+			break;
+		case PWRSUP_STATUS_FAULT:
+			supply_state[i] = PWRSUP_STATE_FAULT;
+			break;
+		}
+}
+DECLARE_HOOK(HOOK_INIT, pwrsup_init, HOOK_PRIO_DEFAULT);
