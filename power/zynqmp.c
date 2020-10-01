@@ -244,6 +244,8 @@ void chipset_reset(enum chipset_reset_reason reason)
 
 enum power_state power_chipset_init(void)
 {
+	bootmode = mcu_flags_get_bootmode();
+
 	if (system_jumped_to_this_image()) {
 		if (pwrsup_check_supplies(s3s0_ps_seq, ARRAY_SIZE(s3s0_ps_seq))) {
 			disable_sleep(SLEEP_MASK_AP_RUN);
@@ -251,7 +253,6 @@ enum power_state power_chipset_init(void)
 			return POWER_S0;
 		}
 	} else {
-		bootmode = mcu_flags_get_bootmode();
 		if (mcu_flags_get_autoboot())
 			chipset_exit_hard_off();
 	}
