@@ -97,6 +97,8 @@ static enum ec_status host_gpio_query(struct host_cmd_handler_args *args)
 	return EC_SUCCESS;
 }
 DECLARE_HOST_COMMAND(EC_CMD_HOST_GPIO_QUERY, host_gpio_query, EC_VER_MASK(0));
+DECLARE_PRIVATE_HOST_COMMAND(EC_CMD_HOST_GPIO_QUERY_PRIVATE, host_gpio_query,
+			     EC_VER_MASK(0));
 
 static enum ec_status host_gpio_set(struct host_cmd_handler_args *args)
 {
@@ -113,3 +115,5 @@ static enum ec_status host_gpio_set(struct host_cmd_handler_args *args)
 	return EC_SUCCESS;
 }
 DECLARE_HOST_COMMAND(EC_CMD_HOST_GPIO_SET, host_gpio_set, EC_VER_MASK(0));
+DECLARE_PRIVATE_HOST_COMMAND(EC_CMD_HOST_GPIO_SET_PRIVATE, host_gpio_set,
+			     EC_VER_MASK(0));

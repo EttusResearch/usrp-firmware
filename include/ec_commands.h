@@ -6447,6 +6447,7 @@ struct ec_params_charger_control {
 } __ec_align_size1;
 
 #define EC_CMD_HOST_GPIO_QUERY 0x2A02
+#define EC_CMD_HOST_GPIO_QUERY_PRIVATE 0x0002
 struct ec_params_host_gpio_query {
 	uint8_t subcmd;
 	uint8_t index;
@@ -6471,6 +6472,7 @@ enum host_gpio_query_subcmd {
 };
 
 #define EC_CMD_HOST_GPIO_SET 0x2A03
+#define EC_CMD_HOST_GPIO_SET_PRIVATE 0x0003
 struct ec_params_host_gpio_set {
 	uint8_t index;
 	uint8_t val;
