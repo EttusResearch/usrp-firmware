@@ -55,7 +55,7 @@ static const struct rail_monitor rail_monitors[] = {
 	{ VMON_1V8_ADC_DAC_AUX },
 	{ VMON_1V8, ina2xx_get_power, INA2XX_1V8 },
 	{ VMON_2V5, ina2xx_get_power, INA2XX_2V5 },
-	{ VMON_2V5_DAC_VTT },
+	{ VMON_3V0_DAC_VTT },
 	{ VMON_1V8_CLK },
 	{ VMON_3V3, ina2xx_get_power, INA2XX_3V3 },
 	{ VMON_3V3_CLK, },
