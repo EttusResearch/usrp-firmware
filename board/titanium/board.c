@@ -52,10 +52,12 @@ BUILD_ASSERT(ARRAY_SIZE(power_signal_list) == POWER_SIGNAL_COUNT);
 
 #ifdef CONFIG_HOST_CONTROL_GPIO
 const struct host_control_gpio host_control_gpios[] = {
-	[USER_LED_G] = { .name = "USER_LED_G_L", .signal = IOEX_PWRDB_LED2G_L },
-	[USER_LED_R] = { .name = "USER_LED_R_L", .signal = IOEX_PWRDB_LED2R_L },
-	[PCIE_LED_G] = { .name = "PCIE_LED_G_L", .signal = IOEX_PWRDB_LED0G_L },
-	[PCIE_LED_R] = { .name = "PCIE_LED_R_L", .signal = IOEX_PWRDB_LED0R_L },
+	[PWRDB_LED0G] = { .name = "LED0G_L", .signal = IOEX_PWRDB_LED0G_L },
+	[PWRDB_LED0R] = { .name = "LED0R_L", .signal = IOEX_PWRDB_LED0R_L },
+	[PWRDB_LED1G] = { .name = "LED1G_L", .signal = IOEX_PWRDB_LED1G_L },
+	[PWRDB_LED1R] = { .name = "LED1R_L", .signal = IOEX_PWRDB_LED1R_L },
+	[PWRDB_LED2G] = { .name = "LED2G_L", .signal = IOEX_PWRDB_LED2G_L },
+	[PWRDB_LED2R] = { .name = "LED2R_L", .signal = IOEX_PWRDB_LED2R_L },
 	[RFDC_POWERED] = { .name = "RFDC_POWERED", .signal = GPIO_SCPLD_IN },
 	[DB0_PWR_EN] = { .name = "DB0_PWR_EN", .signal = 0, .set = db_pwr_ctrl },
 	[DB0_PWR_STATUS] = { .name = "DB0_PWR_STATUS", .signal = 0, .get = db_pwr_stat },
