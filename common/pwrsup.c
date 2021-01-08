@@ -112,16 +112,24 @@ enum pwrsup_status pwrsup_get_status(enum pwrsup_id ps)
 
 	if (sup->flag_mon_adc) {
 		level = adc_read_channel(sup->feedback);
-		if (level < sup->level)
+		if (level < sup->level) {
+			ccprintf("%s level %d is below min %d, reporting fault\n",
+				 sup->name, level, sup->level);
 			return PWRSUP_STATUS_FAULT;
+		}
 	} else if (sup->flag_mon_sig) {
 		if (signal_is_gpio(sup->feedback) &&
 		    !gpio_get_level(sup->feedback)) {
+			ccprintf("%s powergood went low, reporting fault\n",
+				 sup->name);
 			return PWRSUP_STATUS_FAULT;
 		} else if (signal_is_ioex(sup->feedback)) {
 			ioex_get_level(sup->feedback, &level);
-			if (!level)
+			if (!level) {
 				return PWRSUP_STATUS_FAULT;
+				ccprintf("%s powergood went low, reporting fault\n",
+					 sup->name);
+			}
 		}
 	} else {
 		/* No way of checking, so hope for the best */
