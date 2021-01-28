@@ -227,14 +227,14 @@ static int command_pmbus(int argc, char **argv)
 	int v, v2, rv = 0;
 	char *e;
 
-	if (argc < 2)
+	if (argc < 3)
 		return EC_ERROR_PARAM_COUNT;
 
 	idx = strtoi(argv[2], &e, 0);
 	if (*e)
 		return EC_ERROR_PARAM2;
 
-	if (argc >= 3) {
+	if (argc > 3) {
 		v = strtoi(argv[3], &e, 0);
 		if (*e)
 			return EC_ERROR_PARAM3;
