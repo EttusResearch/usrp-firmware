@@ -36,6 +36,26 @@ enum pwrdb_led_color led_color_states[] = {
 };
 BUILD_ASSERT(ARRAY_SIZE(led_color_states) == LED_ID_COUNT);
 
+static enum pwrdb_led_color get_led_color(enum pwrdb_led_id led)
+{
+	int red, green; /* show! */
+
+	ioex_get_level(supported_leds[led].red_signal, &red);
+	ioex_get_level(supported_leds[led].green_signal, &green);
+
+	red = !red;
+	green = !green;
+
+	if (red && green)
+		return LED_AMBER;
+	if (red)
+		return LED_RED;
+	if (green)
+		return LED_GREEN;
+
+	return LED_OFF;
+}
+
 void init_pwrdb_led_states(void)
 {
 	int is_jumped = system_jumped_to_this_image();
@@ -45,6 +65,9 @@ void init_pwrdb_led_states(void)
 			set_pwrdb_led_color(i, LED_OFF, 1 /* force */);
 		}
 	}
+
+	for (int i = 0; i < LED_ID_COUNT; i++)
+		led_color_states[i] = get_led_color(i);
 }
 DECLARE_HOOK(HOOK_INIT, init_pwrdb_led_states, HOOK_PRIO_DEFAULT);
 
