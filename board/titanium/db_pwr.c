@@ -204,6 +204,16 @@ int db_pwr_stat(int which)
 	return db->state == DB_PWR_STATE_ON;
 }
 
+void db_pwr_handle_suspend(void)
+{
+	if (db_pwr_stat(0))
+		db_pwr_ctrl(0, 0);
+
+	if (db_pwr_stat(1))
+		db_pwr_ctrl(1, 0);
+}
+DECLARE_HOOK(HOOK_CHIPSET_SUSPEND, db_pwr_handle_suspend, HOOK_PRIO_DEFAULT);
+
 static int command_dbpwr(int argc, char **argv)
 {
 	const struct db_pwr_seq *seq;
