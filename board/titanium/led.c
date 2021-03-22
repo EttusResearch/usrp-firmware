@@ -19,18 +19,12 @@ struct pwrdb_led {
 };
 
 static const struct pwrdb_led supported_leds[] = {
-	[LED_ID_PCIE] =		{ IOEX_PWRDB_LED0R_L, IOEX_PWRDB_LED0G_L },
-	[LED_ID_SYS] =		{ IOEX_PWRDB_LED1R_L, IOEX_PWRDB_LED1G_L },
-	[LED_ID_USER] = 	{ IOEX_PWRDB_LED2R_L, IOEX_PWRDB_LED2G_L },
 	[LED_ID_PWR] =		{ IOEX_PWRDB_LED3R_L, IOEX_PWRDB_LED3G_L },
 	[LED_ID_PWR_BUTTON] =	{ IOEX_PWRDB_PWRLEDB_L, IOEX_PWRDB_PWRLEDA_L }
 };
 BUILD_ASSERT(ARRAY_SIZE(supported_leds) == LED_ID_COUNT);
 
 enum pwrdb_led_color led_color_states[] = {
-	[LED_ID_PCIE] =	LED_OFF,
-	[LED_ID_SYS] =	LED_OFF,
-	[LED_ID_USER] = LED_OFF,
 	[LED_ID_PWR] =	LED_OFF,
 	[LED_ID_PWR_BUTTON] = LED_OFF
 };
@@ -122,13 +116,7 @@ static int command_led(int argc, char **argv)
 	if (argc < 3)
 		return EC_ERROR_PARAM_COUNT;
 
-	if (!strcasecmp(argv[1], "pcie"))
-		id = LED_ID_PCIE;
-	else if (!strcasecmp(argv[1], "sys"))
-		id = LED_ID_SYS;
-	else if (!strcasecmp(argv[1], "user"))
-		id = LED_ID_USER;
-	else if (!strcasecmp(argv[1], "pwr"))
+	if (!strcasecmp(argv[1], "pwr"))
 		id = LED_ID_PWR;
 	else if (!strcasecmp(argv[1], "pwrbutton"))
 		id = LED_ID_PWR_BUTTON;
@@ -149,6 +137,6 @@ static int command_led(int argc, char **argv)
 	return EC_SUCCESS;
 }
 DECLARE_CONSOLE_COMMAND(led, command_led,
-			"<pcie|sys|user|pwr|pwrbutton> <red|green|amber|off>",
+			"<pwr|pwrbutton> <red|green|amber|off>",
 			"Configure LED.");
 #endif

@@ -14,9 +14,6 @@ enum pwrdb_led_color {
 };
 
 enum pwrdb_led_id {
-	LED_ID_PCIE,
-	LED_ID_SYS,
-	LED_ID_USER,
 	LED_ID_PWR,
 	LED_ID_PWR_BUTTON,
 
