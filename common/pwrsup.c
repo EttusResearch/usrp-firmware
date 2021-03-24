@@ -106,29 +106,35 @@ enum pwrsup_status pwrsup_get_status(enum pwrsup_id ps)
 {
 	const struct pwrsup_info *sup = power_supply_list + ps;
 	int level;
+	int trace;
 
 	if (!pwrsup_powered_on(ps))
 		return PWRSUP_STATUS_OFF;
 
+	trace = supply_state[ps] != PWRSUP_STATE_TURNING_ON;
+
 	if (sup->flag_mon_adc) {
 		level = adc_read_channel(sup->feedback);
 		if (level < sup->level) {
-			ccprintf("%s level %d is below min %d, reporting fault\n",
-				 sup->name, level, sup->level);
+			if (trace)
+				ccprintf("%s level %d is below min %d, reporting fault\n",
+					 sup->name, level, sup->level);
 			return PWRSUP_STATUS_FAULT;
 		}
 	} else if (sup->flag_mon_sig) {
 		if (signal_is_gpio(sup->feedback) &&
 		    !gpio_get_level(sup->feedback)) {
-			ccprintf("%s powergood went low, reporting fault\n",
-				 sup->name);
+			if (trace)
+				ccprintf("%s powergood went low, reporting fault\n",
+					 sup->name);
 			return PWRSUP_STATUS_FAULT;
 		} else if (signal_is_ioex(sup->feedback)) {
 			ioex_get_level(sup->feedback, &level);
 			if (!level) {
+				if (trace)
+					ccprintf("%s powergood went low, reporting fault\n",
+						 sup->name);
 				return PWRSUP_STATUS_FAULT;
-				ccprintf("%s powergood went low, reporting fault\n",
-					 sup->name);
 			}
 		}
 	} else {
