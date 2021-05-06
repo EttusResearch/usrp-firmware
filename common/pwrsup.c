@@ -107,6 +107,7 @@ enum pwrsup_status pwrsup_get_status(enum pwrsup_id ps)
 	const struct pwrsup_info *sup = power_supply_list + ps;
 	int level;
 	int trace;
+	int rv;
 
 	if (!pwrsup_powered_on(ps))
 		return PWRSUP_STATUS_OFF;
@@ -129,11 +130,11 @@ enum pwrsup_status pwrsup_get_status(enum pwrsup_id ps)
 					 sup->name);
 			return PWRSUP_STATUS_FAULT;
 		} else if (signal_is_ioex(sup->feedback)) {
-			ioex_get_level(sup->feedback, &level);
-			if (!level) {
+			rv = ioex_get_level(sup->feedback, &level);
+			if (!rv && !level) {
 				if (trace)
-					ccprintf("%s powergood went low, reporting fault\n",
-						 sup->name);
+					ccprintf("%s powergood went low, reporting fault, rv: %d\n",
+						 sup->name, rv);
 				return PWRSUP_STATUS_FAULT;
 			}
 		}
