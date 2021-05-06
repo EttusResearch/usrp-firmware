@@ -279,6 +279,37 @@ static void tmp468_sensor_init(void)
 DECLARE_HOOK(HOOK_INIT, tmp468_sensor_init, HOOK_PRIO_TEMP_SENSOR);
 #endif
 
+static void enable_3v3mcu_db(void)
+{
+	int rv, val;
+
+	/* let rails discharge */
+	udelay(100 * MSEC);
+
+	rv = ioex_set_level(IOEX_DB0_3V3MCU_EN, 1);
+	if (rv)
+		ccprintf("failed to enable DB0_3V3MCU\n");
+
+	rv = ioex_set_level(IOEX_DB1_3V3MCU_EN, 1);
+	if (rv)
+		ccprintf("failed to enable DB1_3V3MCU\n");
+
+	rv = ioex_get_level(IOEX_DB0_3V3MCU_PG, &val);
+	if (rv)
+		ccprintf("failed to read DB0_3V3MCU_PG\n");
+	ccprintf("DB0_3V3MCU_PG: %d\n", val);
+
+	rv = ioex_get_level(IOEX_DB1_3V3MCU_PG, &val);
+	if (rv)
+		ccprintf("failed to read DB1_3V3MCU_PG\n");
+	ccprintf("DB1_3V3MCU_PG: %d\n", val);
+}
+/*
+ * Need to run as early as possible after the ioexpanders are initialized,
+ * but before anything attempts to read from the DB eeproms
+ */
+DECLARE_HOOK(HOOK_INIT, enable_3v3mcu_db, HOOK_PRIO_INIT_I2C + 2);
+
 #ifdef CONFIG_IO_EXPANDER
 struct ioexpander_config_t ioex_config[] = {
 	{ I2C_PORT_PWR, TCA6416_I2C_ADDR(0), &tca6416_ioexpander_drv },
