@@ -230,6 +230,7 @@ int fan_get_rpm_actual(int ch)
 {
 	uint32_t freq, meas;
 	uint16_t psc;
+	int rpm;
 
 	if (!fan_get_enabled(ch))
 		return 0;
@@ -241,7 +242,9 @@ int fan_get_rpm_actual(int ch)
 	if (!meas)
 		return 0;
 
-	return freq / (psc + 1) / meas * 30 * 8/* channel prescalar */;
+	/* 8 is channel prescaler, 30 is conversion to RPM */
+	rpm = freq * ((30 * 8) / (psc + 1)) / meas;
+	return rpm;
 }
 
 int fan_get_rpm_target(int ch)
