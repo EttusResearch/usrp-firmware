@@ -390,19 +390,13 @@ void fan_ctrl(void)
 DECLARE_HOOK(HOOK_SECOND, fan_ctrl, HOOK_PRIO_DEFAULT);
 
 #if defined(TIM_CAPTURE_FAN0_1)
-void __fan_capture_irq(int fan)
+void __fan_capture_irq(uint16_t sr, int fan)
 {
-	uint16_t sr, sr_ccif, sr_ccof, ccr, arr;
+	uint16_t sr_ccof, ccr, arr;
 
-	sr = STM32_TIM_SR(TIM_CAPTURE_FAN0_1);
-	sr_ccif = fan == 0 ? STM32_TIM_SR_CC1IF : STM32_TIM_SR_CC2IF;
 	sr_ccof = fan == 0 ? STM32_TIM_SR_CC1OF : STM32_TIM_SR_CC2OF;
 	ccr = fan == 0 ? STM32_TIM_CCR1(TIM_CAPTURE_FAN0_1) : STM32_TIM_CCR2(TIM_CAPTURE_FAN0_1);
 	arr = STM32_TIM_ARR(TIM_CAPTURE_FAN0_1);
-
-	/* If no capture event, this was unexpected, return early */
-	if (!(sr & sr_ccif))
-		return;
 
 	/* Got an overflow, clear flag, say we didn't see no edge */
 	if (sr & sr_ccof) {
@@ -436,8 +430,14 @@ void __fan_capture_irq(int fan)
 
 void __fans_capture_irq(void)
 {
-	__fan_capture_irq(FAN_CH_0);
-	__fan_capture_irq(FAN_CH_1);
+	uint16_t sr;
+
+	sr = STM32_TIM_SR(TIM_CAPTURE_FAN0_1);
+
+	if (sr & STM32_TIM_SR_CC1IF)
+		__fan_capture_irq(sr, FAN_CH_0);
+	if (sr & STM32_TIM_SR_CC2IF)
+		__fan_capture_irq(sr, FAN_CH_1);
 }
 DECLARE_IRQ(IRQ_TIM(TIM_CAPTURE_FAN0_1), __fans_capture_irq, 2);
 #endif /* TIM_CAPTURE_FAN0_1 */
