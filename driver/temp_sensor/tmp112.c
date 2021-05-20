@@ -24,6 +24,9 @@ const struct tmp112_t tmp112_sensors[] = {
 #endif
 
 static int temp_val_local[TMP112_COUNT];
+#ifdef CONFIG_TEMP_SENSOR_FLOAT
+static float temp_val_f_local[TMP112_COUNT];
+#endif
 
 static int raw_read16(const struct tmp112_t *dev, const int offset,
 		      int *data_ptr)
@@ -72,6 +75,20 @@ int tmp112_get_val(int idx, int *temp_ptr)
 	return EC_SUCCESS;
 }
 
+#ifdef CONFIG_TEMP_SENSOR_FLOAT
+int tmp112_get_valf(int idx, float *temp_ptr)
+{
+	if (idx >= TMP112_COUNT)
+		return EC_ERROR_INVAL;
+
+	if (temp_val_local[idx] == -1)
+		return EC_ERROR_UNKNOWN;
+
+	*temp_ptr = temp_val_f_local[idx];
+	return EC_SUCCESS;
+}
+#endif
+
 static void tmp112_poll(void)
 {
 	int temp_c = 0;
@@ -83,6 +100,12 @@ static void tmp112_poll(void)
 			temp_val_local[i] = C_TO_K(tmp112_reg_to_c(temp_c));
 		else
 			temp_val_local[i] = -1;
+#ifdef CONFIG_TEMP_SENSOR_FLOAT
+		if (rv == EC_SUCCESS)
+			temp_val_f_local[i] = 273.15f + (temp_c >> TMP112_SHIFT2) * 0.0625f;
+		else
+			temp_val_f_local[i] = -1;
+#endif
 	}
 }
 DECLARE_HOOK(HOOK_SECOND, tmp112_poll, HOOK_PRIO_TEMP_SENSOR);

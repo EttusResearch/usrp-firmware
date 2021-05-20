@@ -38,4 +38,8 @@ extern const struct tmp112_t tmp112_sensors[];
  */
 int tmp112_get_val(int idx, int *temp_ptr);
 
+#ifdef CONFIG_TEMP_SENSOR_FLOAT
+int tmp112_get_valf(int idx, float *temp_ptr);
+#endif
+
 #endif /* __CROS_EC_TMP112_H */
