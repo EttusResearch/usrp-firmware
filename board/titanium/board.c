@@ -240,18 +240,18 @@ const struct tmp112_t tmp112_sensors[] = {
 BUILD_ASSERT(ARRAY_SIZE(tmp112_sensors) == TMP112_COUNT);
 
 const struct temp_sensor_t temp_sensors[] = {
-	{"PMBUS-0", TEMP_SENSOR_TYPE_BOARD, pmbus_temp_get_val, PMBUS_ID0},
-	{"PMBUS-1", TEMP_SENSOR_TYPE_BOARD, pmbus_temp_get_val, PMBUS_ID1},
-	{"EC Internal", TEMP_SENSOR_TYPE_BOARD, ec_adc_get_val, ADC1_TEMPERATURE},
-	{"TMP464 Internal", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_LOCAL},
-	{"Sample Clock PCB", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_REMOTE1},
-	{"RFSoC", TEMP_SENSOR_TYPE_CPU, tmp468_get_val, TMP468_REMOTE2},
-	{"DRAM PCB", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_REMOTE3},
-	{"Power Supply PCB", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_REMOTE4},
-	{"TMP112 DB0 Top", TEMP_SENSOR_TYPE_BOARD, tmp112_get_val, 0},
-	{"TMP112 DB0 Bottom", TEMP_SENSOR_TYPE_BOARD, tmp112_get_val, 1},
-	{"TMP112 DB1 Top", TEMP_SENSOR_TYPE_BOARD, tmp112_get_val, 2},
-	{"TMP112 DB1 Bottom", TEMP_SENSOR_TYPE_BOARD, tmp112_get_val, 3},
+	{"PMBUS-0", TEMP_SENSOR_TYPE_BOARD, pmbus_temp_get_val, PMBUS_ID0, NULL },
+	{"PMBUS-1", TEMP_SENSOR_TYPE_BOARD, pmbus_temp_get_val, PMBUS_ID1, NULL},
+	{"EC Internal", TEMP_SENSOR_TYPE_BOARD, ec_adc_get_val, ADC1_TEMPERATURE, NULL},
+	{"TMP464 Internal", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_LOCAL, tmp468_get_valf},
+	{"Sample Clock PCB", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_REMOTE1, tmp468_get_valf},
+	{"RFSoC", TEMP_SENSOR_TYPE_CPU, tmp468_get_val, TMP468_REMOTE2, tmp468_get_valf},
+	{"DRAM PCB", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_REMOTE3, tmp468_get_valf},
+	{"Power Supply PCB", TEMP_SENSOR_TYPE_BOARD, tmp468_get_val, TMP468_REMOTE4, tmp468_get_valf},
+	{"TMP112 DB0 Top", TEMP_SENSOR_TYPE_BOARD, tmp112_get_val, 0, tmp112_get_valf},
+	{"TMP112 DB0 Bottom", TEMP_SENSOR_TYPE_BOARD, tmp112_get_val, 1, tmp112_get_valf},
+	{"TMP112 DB1 Top", TEMP_SENSOR_TYPE_BOARD, tmp112_get_val, 2, tmp112_get_valf},
+	{"TMP112 DB1 Bottom", TEMP_SENSOR_TYPE_BOARD, tmp112_get_val, 3, tmp112_get_valf},
 };
 BUILD_ASSERT(ARRAY_SIZE(temp_sensors) == TEMP_SENSOR_COUNT);
 
