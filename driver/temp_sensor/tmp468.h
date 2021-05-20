@@ -114,6 +114,19 @@ enum tmp468_power_state {
  */
 int tmp468_get_val(int idx, int *temp_ptr);
 
+#ifdef CONFIG_TEMP_SENSOR_FLOAT
+/**
+ * Get the last polled value of a sensor.
+ *
+ * @param idx		Index to read. Idx indicates whether to read die
+ *			temperature or external temperature.
+ * @param temp_ptr	Destination for temperature in K.
+ *
+ * @return EC_SUCCESS if successful, non-zero if error.
+ */
+int tmp468_get_valf(int idx, float *temp_ptr);
+#endif
+
 /**
  * Power control function of tmp432 temperature sensor.
  *

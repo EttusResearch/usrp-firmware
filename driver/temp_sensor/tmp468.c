@@ -19,6 +19,10 @@
 
 static int fake_temp[TMP468_CHANNEL_COUNT] = {-1, -1, -1, -1, -1, -1, -1 , -1, -1};
 static int temp_val[TMP468_CHANNEL_COUNT]  = {0, 0, 0, 0, 0, 0, 0 , 0, 0};
+#ifdef CONFIG_TEMP_SENSOR_FLOAT
+static float temp_val_f[TMP468_CHANNEL_COUNT]  = {0, 0, 0, 0, 0, 0, 0 , 0, 0};
+#endif
+
 static uint8_t is_sensor_shutdown;
 
 /* idx is the remote number, 1 through 8 */
@@ -88,6 +92,21 @@ int tmp468_get_val(int idx, int *temp_ptr)
 	return EC_ERROR_INVAL;
 }
 
+#ifdef CONFIG_TEMP_SENSOR_FLOAT
+int tmp468_get_valf(int idx, float *temp_ptr)
+{
+	if(!has_power())
+		return EC_ERROR_NOT_POWERED;
+
+	if (idx < TMP468_CHANNEL_COUNT) {
+		*temp_ptr = temp_val_f[idx];
+		return EC_SUCCESS;
+	}
+
+	return EC_ERROR_INVAL;
+}
+#endif
+
 static void temp_sensor_poll(void)
 {
 	int i, ret;
@@ -104,6 +123,9 @@ static void temp_sensor_poll(void)
 				return;
 
 			temp_val[i] = sign_extend(temp_val[i], 16);
+#ifdef CONFIG_TEMP_SENSOR_FLOAT
+			temp_val_f[i] = 273.15f + ((temp_val[i] >> 3) * 0.0625f);
+#endif
 			temp_val[i] >>= TMP468_SHIFT1;
 		}
 }
