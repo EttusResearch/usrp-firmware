@@ -26,6 +26,28 @@ int temp_sensor_read(enum temp_sensor_id id, int *temp_ptr)
 	return sensor->read(sensor->idx, temp_ptr);
 }
 
+#ifdef CONFIG_TEMP_SENSOR_FLOAT
+int temp_sensor_readf(enum temp_sensor_id id, float *temp_ptr)
+{
+	const struct temp_sensor_t *sensor;
+	int rv;
+	int temp;
+
+	if (id < 0 || id >= TEMP_SENSOR_COUNT)
+		return EC_ERROR_INVAL;
+	sensor = temp_sensors + id;
+
+	if (sensor->readf) {
+		rv = sensor->readf(sensor->idx, temp_ptr);
+	} else {
+		rv = sensor->read(sensor->idx, &temp);
+		*temp_ptr = (float)temp;
+	}
+
+	return rv;
+}
+#endif
+
 static void update_mapped_memory(void)
 {
 	int i, t;
@@ -138,6 +160,46 @@ static int command_temps(int argc, char **argv)
 DECLARE_CONSOLE_COMMAND(temps, command_temps,
 			NULL,
 			"Print temp sensors");
+
+#ifdef CONFIG_TEMP_SENSOR_FLOAT
+static int command_tempsf(int argc, char **argv)
+{
+	float t, c;
+	int i;
+	int rv, rv1 = EC_SUCCESS;
+
+	for (i = 0; i < TEMP_SENSOR_COUNT; ++i) {
+		ccprintf("  %-20s: ", temp_sensors[i].name);
+		rv = temp_sensor_readf(i, &t);
+		if (rv)
+			rv1 = rv;
+
+		c = t - 273.15f;
+
+		switch (rv) {
+		case EC_SUCCESS:
+			ccprintf("%d.%d K = %d.%d C", (int)t, (int)((t - (int)t) * 10000),
+				                      (int)c, (int)((c - (int)c) * 10000));
+			ccprintf("\n");
+			break;
+		case EC_ERROR_NOT_POWERED:
+			ccprintf("Not powered\n");
+			break;
+		case EC_ERROR_NOT_CALIBRATED:
+			ccprintf("Not calibrated\n");
+			break;
+		default:
+			ccprintf("Error %d\n", rv);
+		}
+	}
+
+	return rv1;
+}
+DECLARE_CONSOLE_COMMAND(tempsf, command_tempsf,
+			NULL,
+			"Print temp sensors floating point");
+#endif
+
 
 /*****************************************************************************/
 /* Host commands */

@@ -37,6 +37,9 @@ struct temp_sensor_t {
 	int (*read)(int idx, int *temp_ptr);
 	/* Index among the same kind of sensors. */
 	int idx;
+#ifdef CONFIG_TEMP_SENSOR_FLOAT
+	int (*readf)(int idx, float *temp_ptr);
+#endif
 };
 
 #ifdef CONFIG_TEMP_SENSOR
@@ -56,5 +59,17 @@ extern const struct temp_sensor_t temp_sensors[];
  * @return EC_SUCCESS, or non-zero if error.
  */
 int temp_sensor_read(enum temp_sensor_id id, int *temp_ptr);
+
+#ifdef CONFIG_TEMP_SENSOR_FLOAT
+/**
+ * Get the most recently measured temperature (in degrees K) for the sensor.
+ *
+ * @param id		Sensor ID
+ * @param temp_ptr	Destination for temperature
+ *
+ * @return EC_SUCCESS, or non-zero if error.
+ */
+int temp_sensor_readf(enum temp_sensor_id id, float *temp_ptr);
+#endif
 
 #endif  /* __CROS_EC_TEMP_SENSOR_H */
