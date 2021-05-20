@@ -295,7 +295,7 @@ int pid_debug = 0; /* enable/disable debug prints */
 #define ERR_HISTORY_MIN 1 /* at least one reading */
 #define ERR_HISTORY_MAX 120 /* number of readings */
 #define ERR_INIT 2 /* deg C initial error, arbitrary */
-static int error_signal[TEMP_SENSOR_COUNT][ERR_HISTORY_MAX];
+static float error_signal[TEMP_SENSOR_COUNT][ERR_HISTORY_MAX];
 void init_error_signal(void)
 {
 	for (int i = 0; i < TEMP_SENSOR_COUNT; i++)
@@ -318,7 +318,8 @@ void pid_debug_print(char * format, ...)
 
 void update_average_error(float* error_signal_avg)
 {
-	int rv, t_zone, error, sum_error;
+	int rv;
+	float t_zone, error, sum_error;
 	static uint8_t instant;
 
 	pid_debug_print("new_err::");
@@ -329,19 +330,19 @@ void update_average_error(float* error_signal_avg)
 			continue;
 		}
 
-		rv = temp_sensor_read(i /* temp_sensor_id */, &t_zone);
+		rv = temp_sensor_readf(i /* temp_sensor_id */, &t_zone);
 		if (rv) {
 			ccprintf("warning! failed to read %s temperature sensor!\n",
 				temp_sensors[i].name);
 			continue;
 		}
 
-		t_zone = K_TO_C(t_zone);
+		t_zone = t_zone - 273.15f;
 
 		error = t_zone - z->t_target;
 		error_signal[i][instant] = error;
 
-		pid_debug_print("%d:%d\t", i, error);
+		pid_debug_print("%d:%d\t", i, (int)error);
 
 		sum_error = 0;
 		for (int j = 0; j < pid_error_history_length; j++)
@@ -367,7 +368,8 @@ void update_average_error(float* error_signal_avg)
 
 static void cooling_calculator(void)
 {
-	int rv, t_zone;
+	int rv;
+	float t_zone;
 	int cool_percent = 0;
 
 	static float error_signal_avg[TEMP_SENSOR_COUNT];
@@ -394,7 +396,7 @@ static void cooling_calculator(void)
 		/* Trick to print a float with single decimal precision */
 		pid_debug_print("%d:%.1d\t", i, (int)(error_signal_avg[i] * 10));
 
-		rv = temp_sensor_read(i /* temp_sensor_id */, &t_zone);
+		rv = temp_sensor_readf(i /* temp_sensor_id */, &t_zone);
 		if (rv) {
 			ccprintf("warning! failed to read %s temperature sensor!\n",
 				temp_sensors[i].name);
@@ -403,12 +405,12 @@ static void cooling_calculator(void)
 			break;
 		}
 
-		t_zone = K_TO_C(t_zone);
+		t_zone = t_zone - 273.15f;
 
 		if (t_zone >= z->t_warn) {
 			ccprintf("%s temperature: %d is above warning limit, "
 				"maximum cooling\n",
-				z->name, t_zone);
+				z->name, (int)t_zone);
 			cool_percent = 100;
 			z->tending_to_critical = 1;
 		} else if (t_zone < z->t_warn &&
