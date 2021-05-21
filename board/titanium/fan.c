@@ -39,6 +39,7 @@ struct fan_speed_t {
 	uint16_t counter_prev;
 	uint16_t counter_new;
 	int saw_first_edge;
+	uint32_t irq_count;
 };
 
 void fans_configure(void)
@@ -417,6 +418,7 @@ void __fan_capture_irq(int fan)
 		return;
 	}
 
+	fan_speed_state[fan].irq_count++;
 	fan_speed_state[fan].counter_new = ccr;
 	/*
 	 * The actual number of counter increments in between two input capture
@@ -448,7 +450,7 @@ DECLARE_IRQ(IRQ_TIM(TIM_CAPTURE_FAN0_1), __fans_capture_irq, 2);
  */
 void fan_health_monitor(void)
 {
-	static uint16_t fan_counter[FAN_CH_COUNT];
+	static uint32_t irq_count[FAN_CH_COUNT];
 	for (uint8_t fan = 0; fan < FAN_CH_COUNT; fan++) {
 		if (!fan_get_enabled(fan) ||
 			!fan_get_duty(fan) ||
@@ -456,7 +458,7 @@ void fan_health_monitor(void)
 			(fan_get_rpm_mode(fan) &&
 				fan_get_rpm_target(fan) == 0)) {
 			continue;
-		} else if (fan_counter[fan] == fan_speed_state[fan].counter_new) {
+		} else if (irq_count[fan] == fan_speed_state[fan].irq_count) {
 			/* # cycles didn't increment; fan is not spinning */
 			fan_speed_state[fan].ccr_irq = 0;
 			fan_speed_state[fan].sts = FAN_STATUS_STOPPED;
@@ -467,7 +469,7 @@ void fan_health_monitor(void)
 
 	/* Store current values for next comparison */
 	for (uint8_t fan = 0; fan < FAN_CH_COUNT; fan++)
-		fan_counter[fan] = fan_speed_state[fan].counter_new;
+		irq_count[fan] = fan_speed_state[fan].irq_count;
 }
 DECLARE_HOOK(HOOK_SECOND, fan_health_monitor, HOOK_PRIO_DEFAULT);
 
