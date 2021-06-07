@@ -280,6 +280,18 @@ static int all_zones_below_warning(void)
 	return below_warning;
 }
 
+static void print_float(char *s, float f)
+{
+	char sign = ' ';
+	if (f < 0) {
+		sign = '-';
+		f = -f;
+	}
+
+	ccprintf("%s: %c%d.%04d ", s, sign, (int)(f), (int)((f - (int)f) * 10000));
+}
+static int enable_traces = 0;
+
 static void cooling_calculator(void)
 {
 	int rv;
@@ -333,6 +345,17 @@ static void cooling_calculator(void)
 			i_component = z->integral * z->ki;
 
 			cool_percent = p_component + i_component;
+
+			if (enable_traces && (z->kp > 0 || z->ki > 0)) {
+				print_float("kp", z->kp);
+				print_float("ki", z->ki);
+				print_float("sp", (float)z->t_target);
+				print_float("pv", t_zone);
+				print_float("p", p_component);
+				print_float("i", i_component);
+				print_float("cp", cool_percent);
+				ccprintf("\n");
+			}
 
 			if (cool_percent > 0 && cool_percent < 100)
 				z->integral += error;
