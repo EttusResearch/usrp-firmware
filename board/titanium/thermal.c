@@ -36,16 +36,9 @@ struct temp_zone {
 	int tending_to_critical;
 	enum cooling_required cooling_required;
 	int cooling_weight; /* percentage */
-	int cooling_requirement;
-	int kp; /* percent proportional factor */
-	int ki; /* percent integral factor */
-	/*
-	 * Note: We express KP and KI as percentages because it allows us to set
-	 * them to non-integral values like 4.5 which will be set/appear as 450.
-	 * We account for them being percentages by dividing by 100 when they
-	 * are used for cooling calculation. This in turn gives a little more
-	 * fine-grained control over each zone's cooling requirement.
-	 */
+	float cooling_requirement;
+	float kp;
+	float ki;
 };
 
 struct temp_zone temp_zones[TEMP_SENSOR_COUNT] = {
@@ -55,7 +48,7 @@ struct temp_zone temp_zones[TEMP_SENSOR_COUNT] = {
 	{"", 25, 40, 45, 50, 0, COOL_IGNORE_ME, 0,  0, 0, 0}, /* TMP464 Internal */
 	{"", 60, 75, 80, 85, 0, COOL_ME, 0,  0, 0, 0}, /* Sample Clock PCB*/
 	{"", 78, 85, 95, 99, 0, COOL_ME, 0, 0, 0, 0}, /* RFSoC */
-	{"", 44, 75, 80, 85, 0, COOL_ME, 100,  0, 2700, 8}, /* DRAM PCB */
+	{"", 44, 75, 80, 85, 0, COOL_ME, 100,  0, 27.00f, 0.08f}, /* DRAM PCB */
 	{"", 80, 90, 95, 105, 0, COOL_ME, 0, 0, 0, 0}, /* Power Supply PCB */
 	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0}, /* TMP112 DB0 Top */
 	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0}, /* TMP112 DB0 Bottom */
@@ -307,7 +300,7 @@ static void cooling_calculator(void)
 {
 	int rv;
 	float t_zone;
-	int cool_percent = 0;
+	float cool_percent = 0;
 
 	static float integral[TEMP_SENSOR_COUNT];
 
@@ -386,11 +379,10 @@ static void cooling_calculator(void)
 					-pid_allowed_abs_max_integral,
 					pid_allowed_abs_max_integral);
 
-			/* KP and KI are expressed as percentages; account for that */
-			p_component = error * (float)z->kp / (float)100;
-			i_component = integral[i] * (float)z->ki / (float)100;
+			p_component = error * z->kp;
+			i_component = integral[i] * z->ki;
 
-			cool_percent = (int)(p_component + i_component);
+			cool_percent = p_component + i_component;
 		}
 
 		if (cool_percent < 0)
@@ -406,9 +398,9 @@ static void cooling_calculator(void)
 }
 DECLARE_HOOK(HOOK_SECOND, cooling_calculator, HOOK_PRIO_TEMP_SENSOR_DONE + 1);
 
-static int get_aggregate_cooling(void)
+static float get_aggregate_cooling(void)
 {
-	int aggregate_cooling = 0;
+	float aggregate_cooling = 0;
 	int __maybe_unused total_cooling_weight = get_total_cooling_weight();
 
 	if (!is_thermal_control_enabled(FAN_CH_0) ||
@@ -428,7 +420,7 @@ static int get_aggregate_cooling(void)
 	for (int i = 0; i < TEMP_SENSOR_COUNT; i++) {
 		struct temp_zone *z = &temp_zones[i];
 		if (z->cooling_required == COOL_ME) {
-			if (z->cooling_requirement == 100) {
+			if (z->cooling_requirement >= 100) {
 				aggregate_cooling = 100;
 				break;
 			}
@@ -454,7 +446,7 @@ static void temp_control(void)
 		!is_thermal_control_enabled(FAN_CH_1))
 		return;
 
-	aggregate_cooling = get_aggregate_cooling();
+	aggregate_cooling = (int)get_aggregate_cooling();
 
 	fan_set_percent_needed(FAN_CH_0, aggregate_cooling);
 	fan_set_percent_needed(FAN_CH_1, aggregate_cooling);
