@@ -41,7 +41,7 @@ struct temp_zone {
 	float ki;
 };
 
-struct temp_zone temp_zones[TEMP_SENSOR_COUNT] = {
+static struct temp_zone temp_zones[TEMP_SENSOR_COUNT] = {
 	{"", 95, 115, 120, 130, 0, COOL_ME, 0, 0, 0, 0}, /* PMBUS-0 */
 	{"", 95, 115, 120, 130, 0, COOL_ME, 0, 0, 0, 0}, /* PMBUS-1 */
 	{"", 35, 50, 60, 70, 0, COOL_IGNORE_ME, 0, 0, 0, 0}, /* EC Internal */
