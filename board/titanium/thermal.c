@@ -280,10 +280,6 @@ static int all_zones_below_warning(void)
 	return below_warning;
 }
 
-int pid_allowed_abs_min_error = 0; /* deg C */
-int pid_allowed_abs_max_error = 10; /* deg C */
-int pid_allowed_abs_max_integral = 750; /* deg C */
-
 static void cooling_calculator(void)
 {
 	int rv;
@@ -333,41 +329,13 @@ static void cooling_calculator(void)
 		}
 
 		if (!z->tending_to_critical) {
-			/*
-			 * Reset the integral to zero if we reach very close to
-			 * the setpoint to avoid "over-shoot at zero" error
-			 * where a high integral value will cause us to
-			 * excessively cool even if we have reached the
-			 * setpoint.
-			 * If the error is very high we want P control to work
-			 * rather than I because integral will very quickly
-			 * reach a very high unusable value.
-			 * Note that we do have further limits on the maximum
-			 * value that integral will take but this check/reset
-			 * here helps prevents it.
-			 * In effect we want integral component to play a role
-			 * in an optimal error signal range.
-			 */
-			if (ABS(error) <= pid_allowed_abs_min_error ||
-				ABS(error) >= pid_allowed_abs_max_error)
-				z->integral = 0;
-			else
-				z->integral += error;
-
-			/*
-			 * Cap the Integral at a maximum to avoid wind-up error
-			 * where the integral keeps on accumulating to a large
-			 * unusable value during normal operation.
-			 */
-			z->integral = CLAMP(z->integral,
-					-pid_allowed_abs_max_integral,
-					pid_allowed_abs_max_integral);
-
 			p_component = error * z->kp;
 			i_component = z->integral * z->ki;
 
 			cool_percent = p_component + i_component;
 
+			if (cool_percent > 0 && cool_percent < 100)
+				z->integral += error;
 		}
 
 		z->cooling_requirement = CLAMP(cool_percent, 0, 100);
