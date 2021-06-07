@@ -282,19 +282,6 @@ static int all_zones_below_warning(void)
 int pid_allowed_abs_min_error = 0; /* deg C */
 int pid_allowed_abs_max_error = 10; /* deg C */
 int pid_allowed_abs_max_integral = 750; /* deg C */
-int pid_debug = 0; /* enable/disable debug prints */
-
-void pid_debug_print(char * format, ...)
-{
-	if (pid_debug) {
-		char buffer[256];
-		va_list args;
-		va_start(args, format);
-		vsnprintf(buffer, sizeof(buffer), format, args);
-		ccprintf("%s", buffer);
-		va_end(args);
-	}
-}
 
 static void cooling_calculator(void)
 {
@@ -307,8 +294,6 @@ static void cooling_calculator(void)
 	if (!is_thermal_control_enabled(FAN_CH_0) ||
 		!is_thermal_control_enabled(FAN_CH_1))
 		return;
-
-	pid_debug_print("avg_err::");
 
 	for (int i = 0; i < TEMP_SENSOR_COUNT; i++) {
 		struct temp_zone *z = &temp_zones[i];
@@ -388,8 +373,6 @@ static void cooling_calculator(void)
 
 		z->cooling_requirement = CLAMP(cool_percent, 0, 100);
 	}
-
-	pid_debug_print("\n");
 }
 DECLARE_HOOK(HOOK_SECOND, cooling_calculator, HOOK_PRIO_TEMP_SENSOR_DONE + 1);
 
