@@ -289,20 +289,7 @@ static int all_zones_below_warning(void)
 int pid_allowed_abs_min_error = 0; /* deg C */
 int pid_allowed_abs_max_error = 10; /* deg C */
 int pid_allowed_abs_max_integral = 750; /* deg C */
-int pid_error_history_length = 50; /* number of readings used for averaging */
 int pid_debug = 0; /* enable/disable debug prints */
-
-#define ERR_HISTORY_MIN 1 /* at least one reading */
-#define ERR_HISTORY_MAX 120 /* number of readings */
-#define ERR_INIT 2 /* deg C initial error, arbitrary */
-static float error_signal[TEMP_SENSOR_COUNT][ERR_HISTORY_MAX];
-void init_error_signal(void)
-{
-	for (int i = 0; i < TEMP_SENSOR_COUNT; i++)
-		for (int j = 0; j < ERR_HISTORY_MAX; j++)
-			error_signal[i][j] = ERR_INIT;
-}
-DECLARE_HOOK(HOOK_INIT, init_error_signal, HOOK_PRIO_INIT_I2C + 2);
 
 void pid_debug_print(char * format, ...)
 {
@@ -316,75 +303,23 @@ void pid_debug_print(char * format, ...)
 	}
 }
 
-void update_average_error(float* error_signal_avg)
-{
-	int rv;
-	float t_zone, error, sum_error;
-	static uint8_t instant;
-
-	pid_debug_print("new_err::");
-
-	for (int i = 0; i < TEMP_SENSOR_COUNT; i++) {
-		struct temp_zone *z = &temp_zones[i];
-		if (z->cooling_required != COOL_ME) {
-			continue;
-		}
-
-		rv = temp_sensor_readf(i /* temp_sensor_id */, &t_zone);
-		if (rv) {
-			ccprintf("warning! failed to read %s temperature sensor!\n",
-				temp_sensors[i].name);
-			continue;
-		}
-
-		t_zone = t_zone - 273.15f;
-
-		error = t_zone - z->t_target;
-		error_signal[i][instant] = error;
-
-		pid_debug_print("%d:%d\t", i, (int)error);
-
-		sum_error = 0;
-		for (int j = 0; j < pid_error_history_length; j++)
-			sum_error += error_signal[i][j];
-
-		error_signal_avg[i] = (float)sum_error / (float)pid_error_history_length;
-	}
-
-	pid_debug_print("\n");
-
-	instant++;
-
-	/*
-	 * Reset instant so that next write happens at first location in the
-	 * error_signal array's sensors reading row.
-	 * Note that if the pid_error_history_length setting is modified
-	 * sometime during the run, reset instant if it is greater than the
-	 * newly set pid_error_history_length value.
-	 */
-	if (instant >= pid_error_history_length)
-		instant = 0;
-}
-
 static void cooling_calculator(void)
 {
 	int rv;
 	float t_zone;
 	int cool_percent = 0;
 
-	static float error_signal_avg[TEMP_SENSOR_COUNT];
 	static float integral[TEMP_SENSOR_COUNT];
 
 	if (!is_thermal_control_enabled(FAN_CH_0) ||
 		!is_thermal_control_enabled(FAN_CH_1))
 		return;
 
-	update_average_error(error_signal_avg);
-
 	pid_debug_print("avg_err::");
 
 	for (int i = 0; i < TEMP_SENSOR_COUNT; i++) {
 		struct temp_zone *z = &temp_zones[i];
+		float error;
 		float p_component; /* proportional component */
 		float i_component; /* integral component */
 
@@ -392,9 +327,6 @@ static void cooling_calculator(void)
 			z->cooling_requirement = 0;
 			continue;
 		}
-
-		/* Trick to print a float with single decimal precision */
-		pid_debug_print("%d:%.1d\t", i, (int)(error_signal_avg[i] * 10));
 
 		rv = temp_sensor_readf(i /* temp_sensor_id */, &t_zone);
 		if (rv) {
@@ -406,6 +338,7 @@ static void cooling_calculator(void)
 		}
 
 		t_zone = t_zone - 273.15f;
+		error = t_zone - z->t_target;
 
 		if (t_zone >= z->t_warn) {
 			ccprintf("%s temperature: %d is above warning limit, "
@@ -438,11 +371,11 @@ static void cooling_calculator(void)
 			 * In effect we want integral component to play a role
 			 * in an optimal error signal range.
 			 */
-			if (ABS(error_signal_avg[i]) <= pid_allowed_abs_min_error ||
-				ABS(error_signal_avg[i]) >= pid_allowed_abs_max_error)
+			if (ABS(error) <= pid_allowed_abs_min_error ||
+				ABS(error) >= pid_allowed_abs_max_error)
 				integral[i] = 0;
 			else
-				integral[i] = integral[i] + error_signal_avg[i];
+				integral[i] = integral[i] + error;
 
 			/*
 			 * Cap the Integral at a maximum to avoid wind-up error
@@ -454,7 +387,7 @@ static void cooling_calculator(void)
 					pid_allowed_abs_max_integral);
 
 			/* KP and KI are expressed as percentages; account for that */
-			p_component = error_signal_avg[i] * (float)z->kp / (float)100;
+			p_component = error * (float)z->kp / (float)100;
 			i_component = integral[i] * (float)z->ki / (float)100;
 
 			cool_percent = (int)(p_component + i_component);
