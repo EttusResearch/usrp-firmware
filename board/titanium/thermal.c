@@ -383,15 +383,10 @@ static void cooling_calculator(void)
 			i_component = integral[i] * z->ki;
 
 			cool_percent = p_component + i_component;
+
 		}
 
-		if (cool_percent < 0)
-			cool_percent = 0;
-
-		if (cool_percent >= 100)
-			cool_percent = 100;
-
-		z->cooling_requirement = cool_percent;
+		z->cooling_requirement = CLAMP(cool_percent, 0, 100);
 	}
 
 	pid_debug_print("\n");
@@ -430,10 +425,7 @@ static float get_aggregate_cooling(void)
 	}
 #endif
 
-	if (aggregate_cooling < 0)
-		aggregate_cooling = 0;
-	else if(aggregate_cooling >= 100)
-		aggregate_cooling = 100;
+	aggregate_cooling = CLAMP(aggregate_cooling, 0, 100);
 
 	return aggregate_cooling;
 }
