@@ -39,21 +39,22 @@ struct temp_zone {
 	float cooling_requirement;
 	float kp;
 	float ki;
+	float integral;
 };
 
 static struct temp_zone temp_zones[TEMP_SENSOR_COUNT] = {
-	{"", 95, 115, 120, 130, 0, COOL_ME, 0, 0, 0, 0}, /* PMBUS-0 */
-	{"", 95, 115, 120, 130, 0, COOL_ME, 0, 0, 0, 0}, /* PMBUS-1 */
-	{"", 35, 50, 60, 70, 0, COOL_IGNORE_ME, 0, 0, 0, 0}, /* EC Internal */
-	{"", 25, 40, 45, 50, 0, COOL_IGNORE_ME, 0,  0, 0, 0}, /* TMP464 Internal */
-	{"", 60, 75, 80, 85, 0, COOL_ME, 0,  0, 0, 0}, /* Sample Clock PCB*/
-	{"", 78, 85, 95, 99, 0, COOL_ME, 0, 0, 0, 0}, /* RFSoC */
-	{"", 44, 75, 80, 85, 0, COOL_ME, 100,  0, 27.00f, 0.08f}, /* DRAM PCB */
-	{"", 80, 90, 95, 105, 0, COOL_ME, 0, 0, 0, 0}, /* Power Supply PCB */
-	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0}, /* TMP112 DB0 Top */
-	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0}, /* TMP112 DB0 Bottom */
-	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0}, /* TMP112 DB1 Top */
-	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0}, /* TMP112 DB1 Bottom */
+	{"", 95, 115, 120, 130, 0, COOL_ME, 0, 0, 0, 0, 0}, /* PMBUS-0 */
+	{"", 95, 115, 120, 130, 0, COOL_ME, 0, 0, 0, 0, 0}, /* PMBUS-1 */
+	{"", 35, 50, 60, 70, 0, COOL_IGNORE_ME, 0, 0, 0, 0, 0}, /* EC Internal */
+	{"", 25, 40, 45, 50, 0, COOL_IGNORE_ME, 0,  0, 0, 0, 0}, /* TMP464 Internal */
+	{"", 60, 75, 80, 85, 0, COOL_ME, 0,  0, 0, 0, 0}, /* Sample Clock PCB*/
+	{"", 78, 85, 95, 99, 0, COOL_ME, 0, 0, 0, 0, 0}, /* RFSoC */
+	{"", 44, 75, 80, 85, 0, COOL_ME, 100,  0, 27.00f, 0.08f, 0}, /* DRAM PCB */
+	{"", 80, 90, 95, 105, 0, COOL_ME, 0, 0, 0, 0, 0}, /* Power Supply PCB */
+	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0, 0}, /* TMP112 DB0 Top */
+	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0, 0}, /* TMP112 DB0 Bottom */
+	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0, 0}, /* TMP112 DB1 Top */
+	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0, 0}, /* TMP112 DB1 Bottom */
 };
 BUILD_ASSERT(ARRAY_SIZE(temp_zones) == TEMP_SENSOR_COUNT);
 
@@ -289,8 +290,6 @@ static void cooling_calculator(void)
 	float t_zone;
 	float cool_percent = 0;
 
-	static float integral[TEMP_SENSOR_COUNT];
-
 	if (!is_thermal_control_enabled(FAN_CH_0) ||
 		!is_thermal_control_enabled(FAN_CH_1))
 		return;
@@ -351,21 +350,21 @@ static void cooling_calculator(void)
 			 */
 			if (ABS(error) <= pid_allowed_abs_min_error ||
 				ABS(error) >= pid_allowed_abs_max_error)
-				integral[i] = 0;
+				z->integral = 0;
 			else
-				integral[i] = integral[i] + error;
+				z->integral += error;
 
 			/*
 			 * Cap the Integral at a maximum to avoid wind-up error
 			 * where the integral keeps on accumulating to a large
 			 * unusable value during normal operation.
 			 */
-			integral[i] = CLAMP(integral[i],
+			z->integral = CLAMP(z->integral,
 					-pid_allowed_abs_max_integral,
 					pid_allowed_abs_max_integral);
 
 			p_component = error * z->kp;
-			i_component = integral[i] * z->ki;
+			i_component = z->integral * z->ki;
 
 			cool_percent = p_component + i_component;
 
