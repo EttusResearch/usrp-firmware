@@ -49,7 +49,7 @@ static struct temp_zone temp_zones[TEMP_SENSOR_COUNT] = {
 	{"", 25, 40, 45, 50, 0, COOL_IGNORE_ME, 0,  0, 0, 0, 0}, /* TMP464 Internal */
 	{"", 60, 75, 80, 85, 0, COOL_ME, 0,  0, 0, 0, 0}, /* Sample Clock PCB*/
 	{"", 78, 85, 95, 99, 0, COOL_ME, 0, 0, 0, 0, 0}, /* RFSoC */
-	{"", 44, 75, 80, 85, 0, COOL_ME, 100,  0, 1.60f, 0.4f, 0}, /* DRAM PCB */
+	{"", 46, 75, 80, 85, 0, COOL_ME, 100,  0, 1.60f, 0.4f, 0}, /* DRAM PCB */
 	{"", 80, 90, 95, 105, 0, COOL_ME, 0, 0, 0, 0, 0}, /* Power Supply PCB */
 	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0, 0}, /* TMP112 DB0 Top */
 	{"", 55, 80, 85, 90, 0, COOL_ME, 0, 0, 0, 0, 0}, /* TMP112 DB0 Bottom */
