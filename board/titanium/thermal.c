@@ -468,3 +468,24 @@ static void recovery_monitor(void)
 		thermal_shutdown_recovery();
 }
 DECLARE_HOOK(HOOK_SECOND, recovery_monitor, HOOK_PRIO_TEMP_SENSOR_DONE + 4);
+
+static int command_ttarget(int argc, char **argv)
+{
+	int zone;
+
+	if (argc != 2 && argc != 3)
+		return EC_ERROR_PARAM_COUNT;
+
+	zone = atoi(argv[1]);
+	if (zone > TEMP_SENSOR_COUNT)
+		return EC_ERROR_PARAM1;
+
+	if (argc == 3)
+		temp_zones[zone].t_target = atoi(argv[2]);
+	else
+		ccprintf("%d\n", temp_zones[zone].t_target);
+
+	return 0;
+}
+DECLARE_CONSOLE_COMMAND(ttarget, command_ttarget, "<zone> [target]",
+			"Get/set target temperature for a zone");
