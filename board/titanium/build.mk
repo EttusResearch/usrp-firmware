@@ -4,10 +4,22 @@
 #
 # Board specific files build
 
-# the IC is STmicro STM32F412VEH6
+#
+# Build with BOARD=titanium for Rev 6 and later
+# or BOARD=titanium-rev5 for Rev 5
+
 CHIP:=stm32
 CHIP_FAMILY:=stm32f4
-CHIP_VARIANT:=stm32f412
+
+# the IC is STmicro STM32F412VEH6 for Rev 5 and earlier,
+# STM32F411VEH6 for Rev 6 and later
+ifeq ($(BOARD),titanium)
+	CHIP_VARIANT:=stm32f411
+endif
+
+ifeq ($(BOARD),titanium-rev5)
+	CHIP_VARIANT:=stm32f412
+endif
 
 board-y := board.o
 board-y += power.o
