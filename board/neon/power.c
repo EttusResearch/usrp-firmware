@@ -240,6 +240,7 @@ enum power_state power_handle_state(enum power_state state)
 		if (!power_has_signals(IN_PGOOD_S0) || forcing_shutdown)
 			return POWER_S0S3;
 
+		wdt_enabled = 1;
 		break;
 	};
 
