@@ -36,7 +36,7 @@ HOSTCXX?=$(CCACHE) $(HOST_CROSS_COMPILE)g++
 C_WARN = -Wstrict-prototypes -Wdeclaration-after-statement -Wno-pointer-sign
 COMMON_WARN = -Wall -Werror -Wundef -Wno-trigraphs -fno-strict-aliasing \
 	-fno-common -Werror-implicit-function-declaration \
-	-Wno-stringop-overread \
+	-Wno-stringop-overread -Wno-address-of-packed-member \
 	-Wno-format-security -fno-strict-overflow
 CFLAGS_WARN = $(COMMON_WARN) $(C_WARN)
 CXXFLAGS_WARN = $(COMMON_WARN)
