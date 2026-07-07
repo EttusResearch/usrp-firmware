@@ -80,6 +80,34 @@ enum power_state power_chipset_init(void)
 
 static int forcing_shutdown;
 static int wdt_enabled;
+static int ap_boot_retries;
+
+/*
+ * If a power-on attempt fails (power good or SYS_PS_PWRON timeout), retry
+ * retry the power-on a bounded number of times with a delay to let the
+ * input supply and AP boot media settle.
+ */
+#define AP_BOOT_RETRY_DELAY	(2 * SECOND)
+#define AP_BOOT_MAX_RETRIES	3
+
+static void ap_boot_retry(void)
+{
+	CPRINTS("retrying AP power-on, attempt %d/%d",
+		ap_boot_retries, AP_BOOT_MAX_RETRIES);
+	chipset_exit_hard_off();
+}
+DECLARE_DEFERRED(ap_boot_retry);
+
+static void ap_boot_schedule_retry(void)
+{
+	if (ap_boot_retries >= AP_BOOT_MAX_RETRIES) {
+		CPRINTS("AP power-on failed %d times, giving up",
+			ap_boot_retries);
+		return;
+	}
+	ap_boot_retries++;
+	hook_call_deferred(&ap_boot_retry_data, AP_BOOT_RETRY_DELAY);
+}
 
 void chipset_force_shutdown(void)
 {
@@ -178,6 +206,7 @@ enum power_state power_handle_state(enum power_state state)
 		    == EC_ERROR_TIMEOUT) {
 			if (!power_has_signals(IN_PGOOD_S3)) {
 				chipset_force_shutdown();
+				ap_boot_schedule_retry();
 				return POWER_S3S5;
 			}
 		}
@@ -193,10 +222,13 @@ enum power_state power_handle_state(enum power_state state)
 				== EC_ERROR_TIMEOUT) {
 				CPRINTS("AP didn't come up, shutdown");
 				chipset_force_shutdown();
+				ap_boot_schedule_retry();
 				return POWER_S0S3;
 		}
 
 		hook_notify(HOOK_CHIPSET_RESUME);
+		/* AP came up; a future failure gets a fresh retry budget */
+		ap_boot_retries = 0;
 		disable_sleep(SLEEP_MASK_AP_RUN);
 		return POWER_S0;
 
