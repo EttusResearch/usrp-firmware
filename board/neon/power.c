@@ -38,7 +38,12 @@
 #define IN_PGOOD_AP POWER_SIGNAL_MASK(SYS_PS_PWRON)
 #define IN_PGOOD_S0 (IN_PGOOD_AP | IN_PGOOD_S3 | IN_PGOOD_S5)
 
-#define PGOOD_AP_FIRST_TIMEOUT (1 * SECOND)
+/*
+ * Maximum time to wait for the AP (Zynq PS) to assert SYS_PS_PWRON after
+ * being released from reset. Currently asserted late in Zynq u-boot SSBL.
+ * A healthy warm boot has been measured at ~850 ms.
+ */
+#define PGOOD_AP_FIRST_TIMEOUT (3 * SECOND)
 #define PGOOD_AP_DEBOUNCE_TIMEOUT (1 * SECOND)
 #define AP_RST_HOLD_US (1 * MSEC)
 
